@@ -98,9 +98,16 @@ h1 {
     /* transform: rotate(2deg); */
 }
 
-hr {
+/* hr {
     height: 1%;
     border: none;
+} */
+
+.siblings {
+    padding: 1.2vw;
+    padding-left: 0;
+    padding-right: 0;
+    /* border: 1px dashed white; */
 }
 
 .column .haschildren {
@@ -136,7 +143,7 @@ input.active {
 }
 
 .fadein {
-    animation-duration: 3s;
+    animation-duration: 1.5s;
     animation-name: opac;
 }@keyframes opac {
     0%, 33% {opacity:0}

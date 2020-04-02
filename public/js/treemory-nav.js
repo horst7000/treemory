@@ -1,6 +1,8 @@
 import Column from "./column.js"
 import Datafield from "./datafield.js";
-import navColObserver from "./navColObserver.js";
+import SiblingContainer from "./siblingContainer.js";
+
+const SC_DEFAULT_ID = "default";
 
 export default class {
     constructor(dom, editable = true, color = "#447cff") {
@@ -21,18 +23,34 @@ export default class {
             this.columns.push(new Column(colors[i%3], i, this.maxPos));
         }
 
-
-        this.obs = new navColObserver(this);
-        this.activeCol = {};
-        this.highlightField = {};
+        this.activeColPos = 0;
+        this._highlightField = {};
 
         this.columns.forEach(col => {
             row.appendChild(col.HTMLElement);
-            col.addObserver(this.obs);
+            col.onMidChange((e) => {
+                this.activeColPos = e.column.pos;
+                this.highlightField = this.datafieldById(e.column.getMiddleFieldEl().id);
+                // this.updateEmptyChildren();
+                this.updateNewChild();
+                this.updateActiveFields();
+                this.updateMiddleFields(e.column.pos);
+            });
+            col.onFocus((e) => {
+                this.activeColPos = e.column.pos;
+                this.highlightField = this.datafieldById(e.column.getMiddleFieldEl().id);
+                this.updateActiveFields();
+                this.updateNewChild();
+                this.updateMiddleFields(e.column.pos);
+            });
         });
         dom.appendChild(row);
+        
+        this.siblingContainers  = [];
+        this.defaultContainer = new SiblingContainer(SC_DEFAULT_ID);
+        this.columns[0].append(this.defaultContainer);
+        this.siblingContainers.push(this.defaultContainer);
 
-        this.displayIndex = 0;
         this.datafields  = [];
         // this.import(["default"]);
 
@@ -50,11 +68,10 @@ export default class {
      * {value,children:[{...}]}-object
      * @param {*} startfield 
      */
-    import(data, startfield) {
+    import(data, startfield = data[0], startpos = 0) {
         this.datafields.forEach(datafield => {
             this.remove(datafield);
         });
-        
 
         if(Array.isArray(data)) {
             if(data[0].children)
@@ -69,14 +86,11 @@ export default class {
             this.createRecursive(data);
         }
 
-        this.datafields.forEach(datafield => {
-            if(datafield.parentIds.length == 0) {
-                this.displayRecursive(datafield, 0);
-            }
-        });
-
-        // this.obs.update(this.columns[0]);
-        this.columns[0].middleField = this.columns[0].datafields[0];
+        let startdatafield = this.datafieldById(startfield.id) || this.datafields[0];
+        this.display(startdatafield, startpos);
+        this.highlightField = startdatafield;
+        this.activeColPos   = startpos;
+        this.columns[startpos].middleFieldEl = startdatafield.HTMLElement;
     }
 
     autoExportAll(fnExp) { //fnExp function with export (all objects) as input
@@ -101,6 +115,89 @@ export default class {
 
     // private
 
+    updateDisplay() {
+        this.display(this.highlightField, this.activeColPos);
+    }
+
+    display(field, at) {
+        let basefield = field;
+        for (let i = at; i > 0; i--) {
+            basefield = this.datafieldById(field.parentIds[0]);                        
+        }
+        this.displayBase(basefield);
+    }
+
+    displayBase(field) {
+        // prepare counter for display
+        this.containerIndex = 1;
+        this.containerIndexPerCol = [];
+        for (let i = 0; i < this.columns.length; i++) {
+            this.containerIndexPerCol[i] = 0;
+        }
+
+        // prepare first container in column0 for display
+        let invisibleParent = this.datafieldById(field.parentIds[0]);        
+        if(invisibleParent) {
+            let startcon = this.siblingContainerById(invisibleParent.id);
+            if(!startcon) {
+                startcon = new SiblingContainer(invisibleParent.id);
+                this.columns[0].append(startcon);
+                this.siblingContainers.push(startcon);
+            }
+            this.containerIndex++;
+            this.containerIndexPerCol[0]++;
+            this.displayChildren(invisibleParent.childrenIds, this.siblingContainerById(invisibleParent.id), 0, 0, 0);
+        } else {
+            let orphanList = [];
+            this.datafields.forEach(datafield => {
+                if(datafield.parentIds.length == 0) {
+                    orphanList.push(datafield.id);
+                }
+            });
+            this.displayChildren(orphanList, this.siblingContainers[0], 0, 0, 0);
+        }
+        
+        console.log(" ------------ ");
+    }
+
+    displayChildren(childrenIds, container, childColPos) {
+        childrenIds.forEach((cId, childContainerPos) => {
+            let child   = this.datafieldById(cId);
+            let newChildEl = child.createHTML();
+            if(newChildEl) {        
+                newChildEl.classList.add("fadein");
+                newChildEl.addEventListener("focus", (e) => {
+                    this.columns[childColPos].middleFieldEl = child.HTMLElement;
+                });
+                container.append(child, childContainerPos);
+            }
+
+            if(childColPos < this.maxPos) {
+                let nextSc = this.getNextContainer(child.id, childColPos);
+                // this.siblingContainers.push(nextSc);
+                // this.columns[childColPos+1].append(nextSc);
+
+                this.displayChildren(child.childrenIds, nextSc, childColPos+1);
+            }
+        });
+    }
+
+    getNextContainer(childId, childColPos) {
+        let sc = {};
+        if(this.siblingContainers.length > this.containerIndex &&
+            this.siblingContainers[this.containerIndex].id == childId) {
+            sc = this.siblingContainers[this.containerIndex];
+        } else {
+            sc = new SiblingContainer(childId);
+            this.siblingContainers.splice(this.containerIndex, 0, sc);
+            if(childColPos == 1) console.log(this.containerIndexPerCol[childColPos]);
+            this.columns[childColPos+1].append(sc, this.containerIndexPerCol[childColPos]);
+        }
+        this.containerIndex++;
+        this.containerIndexPerCol[childColPos]++;
+        return sc;
+    }
+
     createRecursive(date, parent) {
         let child = new Datafield(date.value);
         if(parent) child.parent = parent;
@@ -113,30 +210,9 @@ export default class {
             });
     }
 
-    displayRecursive(startfield, pos) {
-        if(pos == 0) {
-            this.columns[0].assignDatafields([startfield]);
-        }
-        
-        let children = [];
-        if(pos < this.maxPos) {
-            startfield.childrenIds.forEach(id => {
-                children.push(this.datafieldById(id));
-            });
-            this.columns[pos+1].assignDatafields(children);
-        }
-
-        children.forEach(child => {
-            this.displayRecursive(child, pos+1);
-        });
-    }
-
     updateActiveFields() {
-        this.setActiveFields(this.highlightField);
-    }
-
-    updateHighlightField() {
-        this.setHighlightField(this.highlightField);
+        this.cleanActiveClass();
+        this.setActiveRecursive(this.highlightField.id, this.activeColPos);
     }
 
     updateEmptyChildren() {
@@ -150,61 +226,75 @@ export default class {
     }
 
     updateNewChild() {
-        if(this.highlightField.childrenIds.length == 0 && this.activeCol.pos != this.maxPos) {
+        if(this.highlightField.childrenIds.length == 0 && this.activeColPos != this.maxPos) {
+            // console.log(this.highlightField);
             let newfield = new Datafield();
-            newfield.HTMLElement.classList.add("fadein");
             this.datafields.push(newfield);
-            this.columns[this.activeCol.pos+1].insertInputBelowMiddle(newfield);
-
             newfield.parent = this.highlightField;
+            this.updateDisplay();
         }
     }
 
-    updateMiddleFields(exceptPos) {
+    updateMiddleFields(hglPos) {
+        // let child = this.highlightField;
         this.columns.forEach(col => {
-            if(col.pos == exceptPos) return;
-            let act = col.datafields.find((field) => field.HTMLElement.classList.contains("active")
-                && field.value != "") ||  
-                col.datafields.find((field) => field.HTMLElement.classList.contains("active"));
+            let act;
+            // if(col.pos < hglPos)
+                for(let sc of col.midcell.children)
+                    for(let d of sc.children)
+                        if(d.classList.contains("active")) {
+                            act = d;
+                            break;
+                        }
+            if(col.pos == hglPos) {
+                return;
+            }
+            // if(col.pos > hglPos) {
+            //     child = child.lastSelectedChild;
+            //     act = child;
+            // }
+            
             if(act)
                 col.scrollFieldToMiddle(act)
         });
     }
 
-    setActiveFields(field) {
-        this.cleanActiveClass(field.pos);
-        this.setActiveRecursive(field.id, field.pos);
-    }
-
-    setHighlightField(field) {
-        this.cleanHighlightClass(field.pos);
+    set highlightField(field) {
+        this._highlightField = field;
+        this.cleanHighlightClass();
         field.HTMLElement.classList.add("hgl");
     }
 
-    cleanActiveClass(pos) {
-        this.columns.forEach(col => {
-            // if(col.pos >= pos)
-                col.cleanActiveClass();
+    get highlightField() {
+        return this._highlightField;
+    }
+
+    cleanActiveClass() {
+        let actives = [];
+        for(let el of document.getElementsByClassName("active")) {
+            actives.push(el);
+        }
+        actives.forEach(el => {
+            el.classList.remove("active");
         });
     }
 
     cleanHighlightClass() {
-        this.columns.forEach(col => {
-            col.cleanHighlightClass();
-        });
+        for(let el of document.getElementsByClassName("hgl"))
+            el.classList.remove("hgl");    
     }
 
-    setActiveRecursive(startId, fixPos) {
+    setActiveRecursive(startId, pos) {
         let startfield = this.datafieldById(startId);
+        // console.log("add active "+startfield.value);
         startfield.HTMLElement.classList.add("active");
-        
-        if(startfield.pos >= fixPos)
+        if(pos >= this.activeColPos)
             startfield.childrenIds.forEach(id => {
-                this.setActiveRecursive(id, fixPos);
+                this.setActiveRecursive(id, pos+1);
             });
-        if(startfield.pos <= fixPos)
+        if(pos <= this.activeColPos && pos > 0)
             startfield.parentIds.forEach(id => {
-                this.setActiveRecursive(id, fixPos);
+                this.setActiveRecursive(id, pos-1);
             });
     }
 
@@ -217,23 +307,28 @@ export default class {
         });
     }
 
-    datafieldById(id) { return this.datafields.find((field) => field.id == id) }
+    datafieldById(id) { return this.datafields.find((field) => field.id == id || field.HTMLId == id) }
+    siblingContainerById(id) { return this.siblingContainers.find((sc) => sc.parentId == id || sc.HTMLId == id)}
 
     addControls() {
         window.addEventListener('keydown', (e) => { 
             if (e.keyCode == 40) {
-                this.activeCol.controlDown();
+                this.columns[this.activeColPos].controlUp();
             };
             
             if (e.keyCode == 38) { // Up
-                this.activeCol.controlUp();
+                this.columns[this.activeColPos].controlDown();
             }
 
             if (e.keyCode == 13) { // Enter
-                let newfield = new Datafield();
-                newfield.parent = this.datafieldById(this.highlightField.parentIds[0]);
-                this.datafields.push(newfield);
-                this.activeCol.insertInputBelowMiddle(newfield);
+                let newfield    = new Datafield();
+                let parent      = this.datafieldById(this.highlightField.parentIds[0]);
+                if(parent)
+                    newfield.setParent(parent, parent.indexOf(this.highlightField)+1);
+
+                this.datafields.splice(this.datafields.indexOf(this.highlightField)+1, 0, newfield);
+                this.updateDisplay();
+                console.log(this.datafields);
                 newfield.HTMLElement.focus();
             }
 

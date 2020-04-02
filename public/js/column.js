@@ -18,11 +18,10 @@ export default class {
         this.midtable.appendChild(this.midcell)
         this.column.appendChild(this.midtable);
 
-        this.datafields = [];
+        this.onMidChangeFn  = function(){};
+        this.onFocusFn      = function(){};
 
-        this._middleField;
-
-        this.observers = [];
+        this._middleFieldEl;
 
         this.dy = 0;
         this.lastx = this.lasty = this.startx = this.starty = 0;
@@ -41,70 +40,55 @@ export default class {
         return this._pos;
     }
 
-    set middleField(mel) {
-        if(mel && mel != this._middleField) {
-            this._middleField = mel;
+    get sc() {
+        return siblingContainers;
+    }
+
+    set middleFieldEl(mel) {
+        if(mel && mel != this._middleFieldEl) {
+            this._middleFieldEl = mel;
             this.scrollFieldToMiddle(mel);
-            this.notifyObservers();
+            this.onMidChangeFn({column:this});
         }
     }
 
-    addObserver(o) {
-        this.observers.push(o);
+    onMidChange(fn) {
+        this.onMidChangeFn = fn;
     }
 
-    notifyObservers() {
-        this.observers.forEach(o => {
-            o.update(this);
-        });
+    onFocus(fn) {
+        this.onFocusFn = fn;
     }
 
-    assignDatafields(datafields) {
-        datafields.forEach(field => {        
-            this.appendField(field);
-        });
-        if(this.pos != 0)
-            this.midcell.appendChild(document.createElement("hr"));
-    }
-
-    insertInputBelowMiddle(datafield) { // insert below middleElement
-        this.appendField(datafield, this.getMiddleField());
-    }
-    
-    appendField(field, previousField = false) {
-        this.datafields.push(field);
-        if(previousField)
-            insertAfter(field.HTMLElement, previousField.HTMLElement); // inserts to end if insertAfter is invalid
+    append(siblingContainer, pos) {
+        if(this.midcell.children.length > pos)
+            this.midcell.insertBefore(siblingContainer.HTMLElement, this.midcell.children[pos]);
         else
-            this.midcell.appendChild(field.HTMLElement);
-        field.pos = this.pos;
-        field.HTMLElement.addEventListener("focus", (e) => {
-            this.middleField = field;
-        });
+            this.midcell.appendChild(siblingContainer.HTMLElement);
     }
 
-    cleanActiveClass() {
-        this.datafields.forEach(field => {
-            field.HTMLElement.classList.remove("active");
-        });
+    getMiddleFieldEl() {
+        let mc = this.getMiddleContainerEl();
+        if(!mc) return this._middleFieldEl;
+        for(let fieldEl of mc.children) {
+            if(isElementInMiddle(fieldEl)) {
+                return fieldEl;
+            }
+        }
+        return this._middleFieldEl;
     }
 
-    cleanHighlightClass() {
-        this.datafields.forEach(field => {
-            field.HTMLElement.classList.remove("hgl");            
-        });
-    }
-
-    getMiddleField() {
-        let midfield = this.datafields.find((field) => isElementInMiddle(field.HTMLElement));
-        return midfield || this._middleField;
+    getMiddleContainerEl() {
+        for(let scEl of this.midcell.children) {
+            if(isElementInMiddle(scEl))
+                return scEl;
+        }
     }
 
     remove(datafield) {
-        this.datafields = this.datafields.filter((field) => field.id != datafield.id);
         this.midcell.removeChild(datafield.HTMLElement);
-        if(this.getMiddleField().id == datafield.id)
-            delete this._middleField;
+        if(this.getMiddleFieldEl().id == datafield.id)
+            delete this._middleFieldEl;
 
     }
         
@@ -115,35 +99,29 @@ export default class {
     */
 
     scrollFieldToMiddle(field) {
-        this.controlDY(diffToMiddle(field.HTMLElement), true);
+        this.controlDY(diffToMiddle(field), true);
     }
 
     controlDown() {
-        // let next = hovered.nextSibling;
-        // hoverInputEl(next ? next : createInput());
         this.controlDY(12);
     }
 
     controlUp() {
-        // let prev = hovered.previousSibling;
-        // if(!prev) return;
-        // hoverInputEl(prev);
         this.controlDY(-12);
     }
 
     controlDY(dy, noNotification) {
-        // this.getMiddleField().HTMLElement.blur();
         this.dy = this.dy+dy;
         this.midcell.style.transform = "translateY("+this.dy+"px)";
         if(noNotification)
-            this._middleField = this.getMiddleField();
+            this._middleFieldEl = this.getMiddleFieldEl();
         else
-            this.middleField = this.getMiddleField();
+            this.middleFieldEl = this.getMiddleFieldEl();
 
     }
 
     click() {
-        this.notifyObservers();
+        this.onFocusFn({column: this});
     }
 
     addClickListener() {
@@ -159,7 +137,6 @@ export default class {
             this.starty = parseInt(touchobj.clientY);
             this.lastx = this.startx;
             this.lasty = this.starty;
-            // moves.innerHTML = "touchstart bei ClientX: " + startx + "px ClientY: " + starty + "px";
          });
     
          this.column.addEventListener("touchmove", (e) => {
@@ -169,8 +146,7 @@ export default class {
             let distx = clientx - this.lastx;
             let disty = clienty - this.lasty;
             this.lastx = clientx;
-            this.lasty = clienty;
-            // moves.innerHTML = "touchmove horizontal: " + distx + "px vertikal: " + disty + "px";  
+            this.lasty = clienty; 
             e.preventDefault();
             this.controlDY(disty);
          });
@@ -180,21 +156,16 @@ export default class {
         this.HTMLElement.addEventListener('wheel', (e) => {
             this.sumWheelY += e.deltaY;
             if(this.sumWheelY < -2.5) {
-                this.controlUp();
+                this.controlDown();
                 this.sumWheelY = 0;
             } else if (this.sumWheelY > 2.5) {
-                this.controlDown();
+                this.controlUp();
                 this.sumWheelY = 0;
             }
         });
     }
-
 }
 
-
-function insertAfter(newNode, referenceNode) {
-    referenceNode.parentNode.insertBefore(newNode, referenceNode.nextSibling);
-}
 
 function isElementInMiddle(el) {        
     let diffTop    = el.getBoundingClientRect().top-1 - window.innerHeight/2; //TO-DO container instead of window

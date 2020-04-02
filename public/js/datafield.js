@@ -1,3 +1,5 @@
+const PRE_DF_ID = "field";
+
 export default class {
     constructor(options) {
 
@@ -18,9 +20,9 @@ export default class {
             this.childrenIds    = [];
             this.parentIds      = [];
         }
-
-        this.input = document.createElement("input");
-        this.input.value = this._value;
+        
+        this.HTMLId          = PRE_DF_ID+this.id;
+        this.lastSelectedChild = {};
     }
 
     get id() {
@@ -28,10 +30,26 @@ export default class {
     }
 
     set parent(p) {
+        this.setParent(p);
+    }
+
+    setParent(p, childPos = -1) {
         if(p) {
+            p.lastSelectedChild = this;
             this.parentIds = [p.id];
-            p.childrenIds.push(this.id);
+            if(childPos >= 0) {
+                p.childrenIds.splice(childPos, 0, this.id);
+            } else
+                p.childrenIds.push(this.id);
         }
+    }
+
+    indexOf(child) {
+        return this.childrenIds.indexOf(child.id);
+    }
+
+    get value() {
+        return this.HTMLElement.value;
     }
 
     set value(val) {
@@ -39,19 +57,23 @@ export default class {
         this._value      = val;
     }
 
-    set column(column) {
+    set columnNr(column) {
         this._column = column;
     }
 
-    get value() {
-        return this.HTMLElement.value;
-    }
-
-    get column() {
+    get columnNr() {
         return this._column;
     }
 
     get HTMLElement() {
+        return this.input;
+    }
+
+    createHTML() {
+        if(this.input) return false;
+        this.input          = document.createElement("input");
+        this.input.id       = this.HTMLId;
+        this.input.value    = this._value;
         return this.input;
     }
 
