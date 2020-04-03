@@ -3,8 +3,8 @@ import Datafield from "./datafield.js";
 
 export default class {
     constructor(dom, editable = true, color = "#447cff") {
-        let row = document.createElement("div");
-        row.classList.add("row");
+        this.row = document.createElement("div");
+        this.row.classList.add("row");
 
         this.columns = [];
         // this.columns.push(new Column(color, 0));
@@ -14,34 +14,24 @@ export default class {
         // this.columns.push(new Column("#454545", 4));
         // this.maxPos = this.columns.length-1;
 
-        this.maxPos = 2;
-        let colors = ["#447cff", "#454545", "#3aed35"];
-        for (let i = 0; i <= this.maxPos; i++) {
-            this.columns.push(new Column(colors[i%3], i, this.maxPos));
+        this.maxPos = 3;
+        this.colors = ["#447cff", "#454545", "#3aed35"];
+        for (let i = 0; i <= this.maxPos+2; i++) {
+            this.appendColumn(this.colors[i%3], i, this.maxPos);
         }
+        console.log("max "+(this.maxPos));
+        this.columns.forEach(col => {
+            console.log(col.pos);
+        });
+        this.colBaseIndex = 0; //pos 0
 
         this.activeColPos = 0;
         this._highlightField = {};
 
         this.columns.forEach(col => {
-            row.appendChild(col.HTMLElement);
-            col.onMidChange((e) => {
-                this.activeColPos = e.column.pos;
-                this.highlightField = this.datafieldById(e.column.getMiddleFieldEl().id);
-                // this.updateEmptyChildren();
-                this.updateNewChild();
-                this.updateActiveFields();
-                this.updateMiddleFields(e.column.pos);
-            });
-            col.onFocus((e) => {
-                this.activeColPos = e.column.pos;
-                this.highlightField = this.datafieldById(e.column.getMiddleFieldEl().id);
-                this.updateActiveFields();
-                this.updateNewChild();
-                this.updateMiddleFields(e.column.pos);
-            });
+            
         });
-        dom.appendChild(row);
+        dom.appendChild(this.row);
 
         this.defaultfield = new Datafield({id:"default"});
 
@@ -49,6 +39,37 @@ export default class {
         // this.import(["default"]);
 
         this.addControls();
+    }
+
+    appendColumn(color, pos) {
+        let col = new Column(color, pos, this.maxPos);
+        if(pos == 0)
+            this.columns.splice(pos, 0, col);
+        else
+            this.columns.push(col);
+        this.row.appendChild(col.HTMLElement);
+        col.onMidChange((e) => {
+            this.activeColPos = e.column.pos;
+            this.highlightField = this.datafieldById(e.column.getMiddleFieldEl().id);
+            // this.updateEmptyChildren();
+            this.updateNewChild();
+            this.updateActiveFields();
+            this.updateMiddleFields(e.column.pos);
+        });
+        col.onFocus((e) => {
+            this.activeColPos = e.column.pos;
+            let newMid = e.column.getMiddleFieldEl();
+            console.log("focus on "+e.column.pos);
+            if(newMid)
+                this.highlightField = this.datafieldById(newMid.id);
+            if(e.column.pos == this.maxPos+1)
+                this.moveColumnsLeft();
+            else if (e.column.pos == 0)
+                this.moveColumnsRight();
+            this.updateActiveFields();
+            this.updateNewChild();
+            this.updateMiddleFields(e.column.pos);
+        });
     }
 
     whereAmI() {
@@ -62,7 +83,7 @@ export default class {
      * {value,children:[{...}]}-object
      * @param {*} startfield 
      */
-    import(data, startfield = data[0], startpos = 0) {
+    import(data, startfield = data[0], startpos = 1) {
         this.datafields.forEach(datafield => {
             this.remove(datafield);
         });
@@ -122,10 +143,12 @@ export default class {
     // private
 
     updateDisplay() {
+        console.log("display "+this.highlightField.value+" at "+this.activeColPos);
         this.display(this.highlightField, this.activeColPos);
+        console.log(this.containerIndexPerCol);
     }
 
-    display(field, at) {
+    display(field, at) {  // at = this.activeColPos
         let basefield = field;
         for (let i = at; i > 0; i--) {
             basefield = this.getParent(basefield);                        
@@ -133,40 +156,45 @@ export default class {
         this.displayBase(basefield);
     }
 
-    displayBase(field) {
+    displayBase(invisibleParent) {
         // prepare counter for display
         this.containerIndexPerCol = [];
-        for (let i = 0; i < this.columns.length; i++) {
+        for (let i = 0; i <= this.maxPos+2; i++) {
             this.containerIndexPerCol[i] = 0;
         }
 
-        // prepare first container in column0 for display
-        let invisibleParent = this.getParent(field);
+        // prepare first container in column1 for display
+        // let invisibleParent = this.getParent(field);
         if(invisibleParent.createHTML())  
-            this.columns[0].append(invisibleParent.container,0);
-        this.displayChildren(invisibleParent, 0);
+            this.columns[this.colBaseIndex+1].append(invisibleParent.container,0);
+        this.containerIndexPerCol[1]++;
+        this.displayChildren(invisibleParent, 1);
     }
 
-    displayChildren(parent, childColPos) {
+    displayChildren(parent, displayPos) {
+        let displayColIndex = this.colBaseIndex + displayPos;
         parent.childrenIds.forEach((cId, childContainerPos) => {
+            // create children (HTML)
             let child   = this.datafieldById(cId);
             let newChildEl = child.createHTML();
             if(newChildEl) {        
                 newChildEl.classList.add("fadein");
                 newChildEl.addEventListener("focus", (e) => {
-                    this.columns[childColPos].middleFieldEl = child.HTMLElement;
+                    this.columns[displayColIndex].middleFieldEl = child.HTMLElement;
                 });
                 parent.container.append(child, childContainerPos);
+                // append container of children
+                this.columns[displayColIndex+1].append(child.container, this.containerIndexPerCol[displayPos+1]);
             }
-            if(childContainerPos == 0 && !parent.lastSelectedChild)
-                parent.lastSelectedChild = child;
+            this.containerIndexPerCol[displayPos+1]++;
             
-            if(childColPos < this.maxPos) {
-                if(newChildEl)
-                    this.columns[childColPos+1].append(child.container, this.containerIndexPerCol[childColPos+1]);
-                this.containerIndexPerCol[childColPos+1]++;
-
-                this.displayChildren(child, childColPos+1);
+            if(childContainerPos == 0 && !parent.lastSelectedChild) {
+                parent.lastSelectedChild = child;
+                // console.log(child.value+" <- "+parent.value);
+            }
+            
+            if(displayPos <= this.maxPos) {
+                this.displayChildren(child, displayPos+1);
             }
         });
     }
@@ -203,7 +231,7 @@ export default class {
     }
 
     updateNewChild() {
-        if(this.highlightField.childrenIds.length == 0 && this.activeColPos != this.maxPos) {
+        if(this.highlightField.childrenIds.length == 0) {
             let newfield = new Datafield();
             this.datafields.push(newfield);
             newfield.parent = this.highlightField;
@@ -246,7 +274,7 @@ export default class {
             parent.lastSelectedChild = child;
             child  = parent;
             parent = this.getParent(parent);
-        } while (parent.parentIds.length > 0);
+        } while (parent != this.defaultfield);
     }
 
     get highlightField() {
@@ -271,7 +299,7 @@ export default class {
     setActiveRecursive(startId, pos) {
         let startfield = this.datafieldById(startId);
         startfield.HTMLElement.classList.add("active");
-        if(pos >= this.activeColPos)
+        if(pos >= this.activeColPos && pos < this.maxPos)
             startfield.childrenIds.forEach(id => {
                 this.setActiveRecursive(id, pos+1);
             });
@@ -288,6 +316,34 @@ export default class {
             let parent = this.datafieldById(pId);
             parent.childrenIds = parent.childrenIds.filter(cId => cId != removefield.id);
         });
+    }
+
+    moveColumnsLeft() {
+        this.columns.forEach(col => {
+            col.pos--;
+            col.updateStyle();
+        });
+
+        if(this.columns[this.columns.length-1].pos == this.maxPos+1)
+            this.appendColumn(this.colors[this.columns.length%3], this.maxPos+2);
+
+        this.colBaseIndex++;
+        this.activeColPos--;
+        this.updateDisplay();
+    }
+
+    moveColumnsRight() {
+        this.columns.forEach(col => {
+            col.pos++;
+            col.updateStyle();
+        });
+        
+        if(this.columns[0].pos == 1)
+            this.appendColumn(this.columns[2].color, 0);
+
+        this.colBaseIndex--;
+        this.activeColPos++;
+        this.updateDisplay();
     }
 
     datafieldById(id) { return this.datafields.find((field) => field.id == id || field.HTMLId == id) }

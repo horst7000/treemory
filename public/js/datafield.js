@@ -55,7 +55,6 @@ export default class {
 
     set value(val) {
         this.input.innerHTML = val;
-        console.log(val);
         this._value      = val;
     }
 

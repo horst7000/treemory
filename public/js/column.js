@@ -1,14 +1,12 @@
 export default class {
     constructor(color, pos = 0, maxPos = 4) {
-        this._pos = pos;
+        this._pos   = pos;
+        this.maxPos = maxPos;
+        this.color  = color;
         this.column = document.createElement("div");
         this.column.classList.add("column");
         // this.column.classList.add("column-wider");
-        let width = 100/(maxPos+1);
-        this.column.style.backgroundColor = color;
-        this.column.style.width = width+"%";
-        this.column.style.right = -15+(pos)*width+"%";
-        this.column.style.zIndex = maxPos+1-(pos+1); // max 10 columns
+        this.updateStyle(color, pos, maxPos);
 
         
         this.midtable = document.createElement("div");
@@ -40,6 +38,10 @@ export default class {
         return this._pos;
     }
 
+    set pos(pos) {
+        this._pos = pos;
+    }
+
     get sc() {
         return siblingContainers;
     }
@@ -50,6 +52,14 @@ export default class {
             this.scrollFieldToMiddle(mel);
             this.onMidChangeFn({column:this});
         }
+    }
+
+    updateStyle() {
+        let width = 94/(this.maxPos);
+        this.column.style.backgroundColor = this.color;
+        this.column.style.width = width+"%";
+        this.column.style.right = -12+(this._pos-1)*width+"%";
+        this.column.style.zIndex = this.maxPos+2-(this._pos+1); // max 10 columns
     }
 
     onMidChange(fn) {
