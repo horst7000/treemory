@@ -1,8 +1,5 @@
 import Column from "./column.js"
 import Datafield from "./datafield.js";
-import SiblingContainer from "./siblingContainer.js";
-
-const SC_DEFAULT_ID = "default";
 
 export default class {
     constructor(dom, editable = true, color = "#447cff") {
@@ -45,11 +42,8 @@ export default class {
             });
         });
         dom.appendChild(row);
-        
-        this.siblingContainers  = [];
-        this.defaultContainer = new SiblingContainer(SC_DEFAULT_ID);
-        this.columns[0].append(this.defaultContainer);
-        this.siblingContainers.push(this.defaultContainer);
+
+        this.defaultfield = new Datafield({id:"default"});
 
         this.datafields  = [];
         // this.import(["default"]);
@@ -86,6 +80,12 @@ export default class {
             this.createRecursive(data);
         }
 
+        this.datafields.forEach(datafield => {
+            if(datafield.parentIds.length == 0) {
+                this.defaultfield.childrenIds.push(datafield.id);
+            }
+        });
+
         let startdatafield = this.datafieldById(startfield.id) || this.datafields[0];
         this.display(startdatafield, startpos);
         this.highlightField = startdatafield;
@@ -113,6 +113,12 @@ export default class {
 
     }
 
+
+
+
+
+
+
     // private
 
     updateDisplay() {
@@ -122,46 +128,27 @@ export default class {
     display(field, at) {
         let basefield = field;
         for (let i = at; i > 0; i--) {
-            basefield = this.datafieldById(field.parentIds[0]);                        
+            basefield = this.getParent(basefield);                        
         }
         this.displayBase(basefield);
     }
 
     displayBase(field) {
         // prepare counter for display
-        this.containerIndex = 1;
         this.containerIndexPerCol = [];
         for (let i = 0; i < this.columns.length; i++) {
             this.containerIndexPerCol[i] = 0;
         }
 
         // prepare first container in column0 for display
-        let invisibleParent = this.datafieldById(field.parentIds[0]);        
-        if(invisibleParent) {
-            let startcon = this.siblingContainerById(invisibleParent.id);
-            if(!startcon) {
-                startcon = new SiblingContainer(invisibleParent.id);
-                this.columns[0].append(startcon);
-                this.siblingContainers.push(startcon);
-            }
-            this.containerIndex++;
-            this.containerIndexPerCol[0]++;
-            this.displayChildren(invisibleParent.childrenIds, this.siblingContainerById(invisibleParent.id), 0, 0, 0);
-        } else {
-            let orphanList = [];
-            this.datafields.forEach(datafield => {
-                if(datafield.parentIds.length == 0) {
-                    orphanList.push(datafield.id);
-                }
-            });
-            this.displayChildren(orphanList, this.siblingContainers[0], 0, 0, 0);
-        }
-        
-        console.log(" ------------ ");
+        let invisibleParent = this.getParent(field);
+        if(invisibleParent.createHTML())  
+            this.columns[0].append(invisibleParent.container,0);
+        this.displayChildren(invisibleParent, 0);
     }
 
-    displayChildren(childrenIds, container, childColPos) {
-        childrenIds.forEach((cId, childContainerPos) => {
+    displayChildren(parent, childColPos) {
+        parent.childrenIds.forEach((cId, childContainerPos) => {
             let child   = this.datafieldById(cId);
             let newChildEl = child.createHTML();
             if(newChildEl) {        
@@ -169,33 +156,19 @@ export default class {
                 newChildEl.addEventListener("focus", (e) => {
                     this.columns[childColPos].middleFieldEl = child.HTMLElement;
                 });
-                container.append(child, childContainerPos);
+                parent.container.append(child, childContainerPos);
             }
-
+            if(childContainerPos == 0 && !parent.lastSelectedChild)
+                parent.lastSelectedChild = child;
+            
             if(childColPos < this.maxPos) {
-                let nextSc = this.getNextContainer(child.id, childColPos);
-                // this.siblingContainers.push(nextSc);
-                // this.columns[childColPos+1].append(nextSc);
+                if(newChildEl)
+                    this.columns[childColPos+1].append(child.container, this.containerIndexPerCol[childColPos+1]);
+                this.containerIndexPerCol[childColPos+1]++;
 
-                this.displayChildren(child.childrenIds, nextSc, childColPos+1);
+                this.displayChildren(child, childColPos+1);
             }
         });
-    }
-
-    getNextContainer(childId, childColPos) {
-        let sc = {};
-        if(this.siblingContainers.length > this.containerIndex &&
-            this.siblingContainers[this.containerIndex].id == childId) {
-            sc = this.siblingContainers[this.containerIndex];
-        } else {
-            sc = new SiblingContainer(childId);
-            this.siblingContainers.splice(this.containerIndex, 0, sc);
-            if(childColPos == 1) console.log(this.containerIndexPerCol[childColPos]);
-            this.columns[childColPos+1].append(sc, this.containerIndexPerCol[childColPos]);
-        }
-        this.containerIndex++;
-        this.containerIndexPerCol[childColPos]++;
-        return sc;
     }
 
     createRecursive(date, parent) {
@@ -208,6 +181,10 @@ export default class {
             date.children.forEach(childdata => {
                 this.createRecursive(childdata, child);
             });
+    }
+
+    getParent(field) {
+        return this.datafieldById(field.parentIds[0]) || this.defaultfield;
     }
 
     updateActiveFields() {
@@ -227,7 +204,6 @@ export default class {
 
     updateNewChild() {
         if(this.highlightField.childrenIds.length == 0 && this.activeColPos != this.maxPos) {
-            // console.log(this.highlightField);
             let newfield = new Datafield();
             this.datafields.push(newfield);
             newfield.parent = this.highlightField;
@@ -236,10 +212,10 @@ export default class {
     }
 
     updateMiddleFields(hglPos) {
-        // let child = this.highlightField;
+        let child = this.highlightField;
         this.columns.forEach(col => {
             let act;
-            // if(col.pos < hglPos)
+            if(col.pos < hglPos)
                 for(let sc of col.midcell.children)
                     for(let d of sc.children)
                         if(d.classList.contains("active")) {
@@ -249,10 +225,10 @@ export default class {
             if(col.pos == hglPos) {
                 return;
             }
-            // if(col.pos > hglPos) {
-            //     child = child.lastSelectedChild;
-            //     act = child;
-            // }
+            if(col.pos > hglPos && child.lastSelectedChild) {
+                child = child.lastSelectedChild;
+                act = child.HTMLElement;
+            }
             
             if(act)
                 col.scrollFieldToMiddle(act)
@@ -263,6 +239,14 @@ export default class {
         this._highlightField = field;
         this.cleanHighlightClass();
         field.HTMLElement.classList.add("hgl");
+        // this.getParent(field).lastSelectedChild = field;
+        let child   = field;
+        let parent  = this.getParent(field);
+        do {
+            parent.lastSelectedChild = child;
+            child  = parent;
+            parent = this.getParent(parent);
+        } while (parent.parentIds.length > 0);
     }
 
     get highlightField() {
@@ -286,7 +270,6 @@ export default class {
 
     setActiveRecursive(startId, pos) {
         let startfield = this.datafieldById(startId);
-        // console.log("add active "+startfield.value);
         startfield.HTMLElement.classList.add("active");
         if(pos >= this.activeColPos)
             startfield.childrenIds.forEach(id => {
@@ -308,7 +291,6 @@ export default class {
     }
 
     datafieldById(id) { return this.datafields.find((field) => field.id == id || field.HTMLId == id) }
-    siblingContainerById(id) { return this.siblingContainers.find((sc) => sc.parentId == id || sc.HTMLId == id)}
 
     addControls() {
         window.addEventListener('keydown', (e) => { 
@@ -321,14 +303,13 @@ export default class {
             }
 
             if (e.keyCode == 13) { // Enter
+                e.preventDefault(); //Firefox bug (innerHTML="" => no height and left aligned)
                 let newfield    = new Datafield();
-                let parent      = this.datafieldById(this.highlightField.parentIds[0]);
-                if(parent)
-                    newfield.setParent(parent, parent.indexOf(this.highlightField)+1);
+                let parent      = this.getParent(this.highlightField);
+                newfield.setParent(parent, parent.indexOf(this.highlightField)+1);
 
                 this.datafields.splice(this.datafields.indexOf(this.highlightField)+1, 0, newfield);
                 this.updateDisplay();
-                console.log(this.datafields);
                 newfield.HTMLElement.focus();
             }
 

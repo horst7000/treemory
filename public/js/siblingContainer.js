@@ -2,7 +2,6 @@ const PRE_SC_ID = "children";
 
 export default class {
     constructor(parentId) {
-        console.log("neuer container");
         this.parentId    = parentId;
         this.HTMLId      = PRE_SC_ID+parentId;
         this.HTMLElement = document.createElement("div");

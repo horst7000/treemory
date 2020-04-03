@@ -1,5 +1,7 @@
 const PRE_DF_ID = "field";
 
+import SiblingContainer from "./siblingContainer.js";
+
 export default class {
     constructor(options) {
 
@@ -22,7 +24,7 @@ export default class {
         }
         
         this.HTMLId          = PRE_DF_ID+this.id;
-        this.lastSelectedChild = {};
+        this.lastSelectedChild;
     }
 
     get id() {
@@ -35,7 +37,6 @@ export default class {
 
     setParent(p, childPos = -1) {
         if(p) {
-            p.lastSelectedChild = this;
             this.parentIds = [p.id];
             if(childPos >= 0) {
                 p.childrenIds.splice(childPos, 0, this.id);
@@ -49,11 +50,12 @@ export default class {
     }
 
     get value() {
-        return this.HTMLElement.value;
+        return this.HTMLElement.innerHTML;
     }
 
     set value(val) {
-        this.input.value = val;
+        this.input.innerHTML = val;
+        console.log(val);
         this._value      = val;
     }
 
@@ -71,9 +73,11 @@ export default class {
 
     createHTML() {
         if(this.input) return false;
-        this.input          = document.createElement("input");
-        this.input.id       = this.HTMLId;
-        this.input.value    = this._value;
+        this.input                  = document.createElement("p");
+        this.input.contentEditable  = true;
+        this.input.id               = this.HTMLId;
+        this.value                  = this._value;
+        this.container              = new SiblingContainer(this._id);
         return this.input;
     }
 
