@@ -50,7 +50,7 @@ export default class {
     }
 
     get value() {
-        return this.HTMLElement.innerHTML;
+        return this.HTMLElement?this.HTMLElement.innerHTML:this._value;
     }
 
     set value(val) {
@@ -68,6 +68,10 @@ export default class {
 
     get HTMLElement() {
         return this.input;
+    }
+
+    isDisplayed() {
+        return (this.input && this.input.parentNode && this.input.parentNode.parentNode)
     }
 
     createHTML() {

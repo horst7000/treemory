@@ -91,7 +91,7 @@ h1 {
 } */
 
 .siblings {
-    padding: 1.6vw;
+    padding: 2vw;
     padding-left: 0;
     padding-right: 0;
     /* border: 1px dashed white; */
@@ -131,7 +131,7 @@ p.active {
 }
 
 .fadein {
-    animation-duration: 1.5s;
+    animation-duration: 1.0s;
     animation-name: opac;
 }@keyframes opac {
     0%, 33% {opacity:0}

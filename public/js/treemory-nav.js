@@ -19,18 +19,11 @@ export default class {
         for (let i = 0; i <= this.maxPos+2; i++) {
             this.appendColumn(this.colors[i%3], i, this.maxPos);
         }
-        console.log("max "+(this.maxPos));
-        this.columns.forEach(col => {
-            console.log(col.pos);
-        });
-        this.colBaseIndex = 0; //pos 0
+        this.baseColIndex = 0; //pos 0
 
         this.activeColPos = 0;
-        this._highlightField = {};
+        this.highlightField = {};
 
-        this.columns.forEach(col => {
-            
-        });
         dom.appendChild(this.row);
 
         this.defaultfield = new Datafield({id:"default"});
@@ -48,27 +41,16 @@ export default class {
         else
             this.columns.push(col);
         this.row.appendChild(col.HTMLElement);
+        
         col.onMidChange((e) => {
-            this.activeColPos = e.column.pos;
-            this.highlightField = this.datafieldById(e.column.getMiddleFieldEl().id);
+            this.highlightField.HTMLElement.blur();
+            this.activeColPos   = e.column.pos;
+            this.updateHighlightField();
             // this.updateEmptyChildren();
-            this.updateNewChild();
-            this.updateActiveFields();
-            this.updateMiddleFields(e.column.pos);
         });
+
         col.onFocus((e) => {
-            this.activeColPos = e.column.pos;
-            let newMid = e.column.getMiddleFieldEl();
-            console.log("focus on "+e.column.pos);
-            if(newMid)
-                this.highlightField = this.datafieldById(newMid.id);
-            if(e.column.pos == this.maxPos+1)
-                this.moveColumnsLeft();
-            else if (e.column.pos == 0)
-                this.moveColumnsRight();
-            this.updateActiveFields();
-            this.updateNewChild();
-            this.updateMiddleFields(e.column.pos);
+            this.focus(e.column);
         });
     }
 
@@ -109,17 +91,18 @@ export default class {
 
         let startdatafield = this.datafieldById(startfield.id) || this.datafields[0];
         this.display(startdatafield, startpos);
-        this.highlightField = startdatafield;
         this.activeColPos   = startpos;
+        // this.highlightField = startdatafield;
+        this.updateHighlightField(startdatafield);
         this.columns[startpos].middleFieldEl = startdatafield.HTMLElement;
     }
 
     autoExportAll(fnExp) { //fnExp function with export (all objects) as input
-        //TO-DO on datafield change call fnExp(export())
+        //TODO on datafield change call fnExp(export())
     }
 
     autoExportDiff(fnExp) { //fnExp function with export (changed objects) as input
-        //TO-DO: on datafield change call fnExp(exportDiff())
+        //TODO: on datafield change call fnExp(exportDiff())
     }
 
     export() {
@@ -162,30 +145,51 @@ export default class {
         for (let i = 0; i <= this.maxPos+2; i++) {
             this.containerIndexPerCol[i] = 0;
         }
-
+       
         // prepare first container in column1 for display
         // let invisibleParent = this.getParent(field);
-        if(invisibleParent.createHTML())  
-            this.columns[this.colBaseIndex+1].append(invisibleParent.container,0);
+        if(!invisibleParent.container)
+            invisibleParent.createHTML();
+        if(!invisibleParent.container.HTMLElement.parentNode)
+            this.columns[this.baseColIndex+1].append(invisibleParent.container,0);
+        console.log("base "+invisibleParent.value);
+        invisibleParent.keepContainer = true;
         this.containerIndexPerCol[1]++;
         this.displayChildren(invisibleParent, 1);
+
+        
+        // clean all columns
+        this.datafields.forEach(field => {
+            // if(field != invisibleParent)
+            this.keepOrDelete(field);
+        });
+        this.keepOrDelete(this.defaultfield);
+    }
+
+    keepOrDelete(field) {
+        if(!field.keepContainer && field.container && field.container.HTMLElement.parentNode) {
+            field.container.HTMLElement.parentNode.removeChild(field.container.HTMLElement);
+        }
+        field.keepContainer = false;
     }
 
     displayChildren(parent, displayPos) {
-        let displayColIndex = this.colBaseIndex + displayPos;
+        let displayColIndex = this.baseColIndex + displayPos;
         parent.childrenIds.forEach((cId, childContainerPos) => {
             // create children (HTML)
             let child   = this.datafieldById(cId);
-            let newChildEl = child.createHTML();
-            if(newChildEl) {        
-                newChildEl.classList.add("fadein");
-                newChildEl.addEventListener("focus", (e) => {
+            child.createHTML();
+            child.keepContainer = true;
+            if(!child.HTMLElement.parentNode) {        
+                child.HTMLElement.classList.add("fadein");
+                child.HTMLElement.addEventListener("focus", (e) => {
                     this.columns[displayColIndex].middleFieldEl = child.HTMLElement;
                 });
                 parent.container.append(child, childContainerPos);
-                // append container of children
-                this.columns[displayColIndex+1].append(child.container, this.containerIndexPerCol[displayPos+1]);
             }
+            // append container of children
+            if(!child.container.parentNode)
+                this.columns[displayColIndex+1].append(child.container, this.containerIndexPerCol[displayPos+1]);
             this.containerIndexPerCol[displayPos+1]++;
             
             if(childContainerPos == 0 && !parent.lastSelectedChild) {
@@ -193,7 +197,7 @@ export default class {
                 // console.log(child.value+" <- "+parent.value);
             }
             
-            if(displayPos <= this.maxPos) {
+            if(displayPos < this.maxPos+1) {
                 this.displayChildren(child, displayPos+1);
             }
         });
@@ -239,8 +243,9 @@ export default class {
         }
     }
 
-    updateMiddleFields(hglPos) {
-        let child = this.highlightField;
+    updateMiddleFields() {
+        let hglPos = this.activeColPos;
+        let child  = this.highlightField;
         this.columns.forEach(col => {
             let act;
             if(col.pos < hglPos)
@@ -263,8 +268,12 @@ export default class {
         });
     }
 
-    set highlightField(field) {
-        this._highlightField = field;
+    // needs activeColPos to be set correctly
+    updateHighlightField(field) {
+        if(!field)
+            field = this.datafieldById(this.columns[this.activeColPos+this.baseColIndex].getMiddleFieldEl().id)
+        if(!field) return;
+        this.highlightField = field;
         this.cleanHighlightClass();
         field.HTMLElement.classList.add("hgl");
         // this.getParent(field).lastSelectedChild = field;
@@ -274,11 +283,11 @@ export default class {
             parent.lastSelectedChild = child;
             child  = parent;
             parent = this.getParent(parent);
-        } while (parent != this.defaultfield);
-    }
-
-    get highlightField() {
-        return this._highlightField;
+        } while (parent.isDisplayed());
+        
+        this.updateActiveFields();
+        this.updateNewChild();
+        this.updateMiddleFields();
     }
 
     cleanActiveClass() {
@@ -309,25 +318,61 @@ export default class {
             });
     }
 
-    remove(removefield) {
-        this.datafields = this.datafields.filter((field) => field.id != removefield.id);
-        this.columns[removefield.pos].remove(removefield);
-        removefield.parentIds.forEach(pId => {
-            let parent = this.datafieldById(pId);
-            parent.childrenIds = parent.childrenIds.filter(cId => cId != removefield.id);
-        });
+    // remove(removefield) {
+    //     this.datafields = this.datafields.filter((field) => field.id != removefield.id);
+    //     this.columns[removefield.pos].remove(removefield);
+    //     removefield.parentIds.forEach(pId => {
+    //         let parent = this.datafieldById(pId);
+    //         parent.childrenIds = parent.childrenIds.filter(cId => cId != removefield.id);
+    //     });
+    // }
+
+    focus(column) {
+        if(column.pos <= this.activeColPos) {
+            if (column.pos == 0 && this.baseColIndex == 0) return;
+            let oldPos = this.activeColPos;
+            this.activeColPos   = column.pos;
+            if (column.pos == 0) {
+                while(oldPos > 0) {
+                    this.highlightField = this.getParent(this.highlightField);
+                    oldPos--;
+                }
+                this.moveColumnsRight();
+            }
+            this.updateHighlightField();
+        }
+        else { // select most left highlight field (following actives)
+            let newHgl;
+            newHgl = this.highlightField;
+            while(newHgl.lastSelectedChild && this.activeColPos < column.pos) {
+                newHgl = newHgl.lastSelectedChild;
+                this.activeColPos++;
+            }
+            
+            this.activeColPos = this.activeColPos;
+            this.updateHighlightField(newHgl); // eventually creates new field
+
+            
+            if(this.activeColPos < column.pos) {
+                this.activeColPos++;
+                this.updateHighlightField();
+            }
+            
+            if(column.pos == this.maxPos+1 && this.activeColPos == this.maxPos+1)
+                this.moveColumnsLeft();
+        }  
     }
 
     moveColumnsLeft() {
         this.columns.forEach(col => {
             col.pos--;
-            col.updateStyle();
+            col.smoothUpdateStyle(400);
         });
 
         if(this.columns[this.columns.length-1].pos == this.maxPos+1)
             this.appendColumn(this.colors[this.columns.length%3], this.maxPos+2);
 
-        this.colBaseIndex++;
+        this.baseColIndex++;
         this.activeColPos--;
         this.updateDisplay();
     }
@@ -335,13 +380,14 @@ export default class {
     moveColumnsRight() {
         this.columns.forEach(col => {
             col.pos++;
-            col.updateStyle();
+            col.smoothUpdateStyle(400);
         });
         
         if(this.columns[0].pos == 1)
             this.appendColumn(this.columns[2].color, 0);
 
-        this.colBaseIndex--;
+            
+        if(this.baseColIndex > 0) this.baseColIndex--;
         this.activeColPos++;
         this.updateDisplay();
     }
@@ -351,35 +397,40 @@ export default class {
     addControls() {
         window.addEventListener('keydown', (e) => { 
             if (e.keyCode == 40) {
-                this.columns[this.activeColPos].controlUp();
+                this.columns[this.activeColPos+this.baseColIndex].controlUp();
+                this.columns[this.activeColPos+this.baseColIndex].controlUp();
             };
             
             if (e.keyCode == 38) { // Up
-                this.columns[this.activeColPos].controlDown();
+                this.columns[this.activeColPos+this.baseColIndex].controlDown();
+                this.columns[this.activeColPos+this.baseColIndex].controlDown();
             }
 
             if (e.keyCode == 13) { // Enter
                 e.preventDefault(); //Firefox bug (innerHTML="" => no height and left aligned)
-                let newfield    = new Datafield();
-                let parent      = this.getParent(this.highlightField);
-                newfield.setParent(parent, parent.indexOf(this.highlightField)+1);
-
-                this.datafields.splice(this.datafields.indexOf(this.highlightField)+1, 0, newfield);
-                this.updateDisplay();
-                newfield.HTMLElement.focus();
+                if(document.activeElement == this.highlightField.HTMLElement) {
+                    let newfield    = new Datafield();
+                    let parent      = this.getParent(this.highlightField);
+                    newfield.setParent(parent, parent.indexOf(this.highlightField)+1);
+    
+                    this.datafields.splice(this.datafields.indexOf(this.highlightField)+1, 0, newfield);
+                    this.updateDisplay();
+                    newfield.HTMLElement.focus();
+                } else
+                this.highlightField.HTMLElement.focus();
             }
 
             if (e.keyCode == 27) { // ESC
                 this.highlightField.HTMLElement.blur();
             }
 
-            // if (e.keyCode == 37 && !isFocusOnHovered()) { // left
-            //     this.activeCol.controlLeft();
-            // }
+            if (e.keyCode == 37) { // left
+                this.focus(this.columns[this.activeColPos+this.baseColIndex+1]);
+            }
             
-            // if (e.keyCode == 39  && !isFocusOnHovered() && superqueue.length > 1) { // right
-            //     this.activeCol.controlRight();
-            // }
+            if (e.keyCode == 39 ) { // right
+                this.focus(this.columns[this.activeColPos+this.baseColIndex-1]);
+            }
         });
     }
 }

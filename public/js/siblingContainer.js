@@ -13,6 +13,10 @@ export default class {
         return this.parentId;
     }
 
+    get parentNode() {
+        return this.HTMLElement.parentNode;
+    }
+
     append(datafield, pos) {
         if(this.HTMLElement.children.length > pos)
             this.HTMLElement.insertBefore(datafield.HTMLElement, this.HTMLElement.children[pos]);

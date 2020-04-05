@@ -6,7 +6,7 @@ export default class {
         this.column = document.createElement("div");
         this.column.classList.add("column");
         // this.column.classList.add("column-wider");
-        this.updateStyle(color, pos, maxPos);
+        this.updateStyle(pos);
 
         
         this.midtable = document.createElement("div");
@@ -39,7 +39,8 @@ export default class {
     }
 
     set pos(pos) {
-        this._pos = pos;
+        this._oldPos = this._pos;
+        this._pos    = pos;
     }
 
     get sc() {
@@ -54,12 +55,32 @@ export default class {
         }
     }
 
-    updateStyle() {
+    updateStyle(pos = this.pos) {
         let width = 94/(this.maxPos);
         this.column.style.backgroundColor = this.color;
         this.column.style.width = width+"%";
-        this.column.style.right = -12+(this._pos-1)*width+"%";
-        this.column.style.zIndex = this.maxPos+2-(this._pos+1); // max 10 columns
+        this.column.style.right = -12+(pos-1)*width+"%";
+        this.column.style.zIndex = this.maxPos+2-(pos+1); // max 10 columns
+    }
+    
+    smoothUpdateStyle(duration) {
+        let posDif = this._pos - this._oldPos;
+        let startTime;
+        let oldPos = this._oldPos;
+        let self = this;
+        function animation(currentTime) {
+            if(!startTime) startTime = currentTime;
+            let timeElapsed = currentTime - startTime;
+            let smoothPos = ease(timeElapsed, oldPos, posDif, duration)
+            self.updateStyle(smoothPos);
+            if(timeElapsed < duration) requestAnimationFrame(animation);
+        }
+
+        function ease(t,b,c,d) {
+            return -c/2 * (Math.cos(Math.PI*t/d) - 1) + b;
+        }
+
+        requestAnimationFrame(animation);
     }
 
     onMidChange(fn) {
@@ -79,13 +100,16 @@ export default class {
 
     getMiddleFieldEl() {
         let mc = this.getMiddleContainerEl();
-        if(!mc) return this._middleFieldEl;
-        for(let fieldEl of mc.children) {
-            if(isElementInMiddle(fieldEl)) {
-                return fieldEl;
+        if(mc)
+            for(let fieldEl of mc.children) {
+                if(isElementInMiddle(fieldEl)) {
+                    return fieldEl;
+                }
             }
-        }
-        return this._middleFieldEl;
+        if(this._middleFieldEl && this._middleFieldEl.parentNode && this._middleFieldEl.parentNode.parentNode)
+            return this._middleFieldEl;
+        else
+            return undefined
     }
 
     getMiddleContainerEl() {
@@ -95,11 +119,9 @@ export default class {
         }
     }
 
-    remove(datafield) {
-        this.midcell.removeChild(datafield.HTMLElement);
-        if(this.getMiddleFieldEl().id == datafield.id)
-            delete this._middleFieldEl;
-
+    clean() {
+        while(this.midcell.lastElementChild)
+            this.midcell.removeChild(this.midcell.lastElementChild);
     }
         
     /*
@@ -135,9 +157,9 @@ export default class {
     }
 
     addClickListener() {
-        this.column.addEventListener("mousedown",(e) => this.click(e));
-        this.column.addEventListener("touchstart", (e) => this.click());
-        this.column.addEventListener("wheel", (e) => this.click());
+        this.column.addEventListener("mousedown",() => this.click());
+        // this.column.addEventListener("touchstart", (e) => this.click());
+        this.column.addEventListener("wheel", () => this.click());
     }
 
     addTouchListener() {
