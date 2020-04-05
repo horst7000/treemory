@@ -43,10 +43,11 @@ export default class {
         this.row.appendChild(col.HTMLElement);
         
         col.onMidChange((e) => {
-            this.highlightField.HTMLElement.blur();
             this.activeColPos   = e.column.pos;
             this.updateHighlightField();
             // this.updateEmptyChildren();
+            if(!this.isHighlightFieldFocused())
+                document.activeElement.blur();
         });
 
         col.onFocus((e) => {
@@ -392,6 +393,10 @@ export default class {
         this.updateDisplay();
     }
 
+    isHighlightFieldFocused() {
+        return document.activeElement == this.highlightField.HTMLElement;
+    }
+
     datafieldById(id) { return this.datafields.find((field) => field.id == id || field.HTMLId == id) }
 
     addControls() {
@@ -408,27 +413,32 @@ export default class {
 
             if (e.keyCode == 13) { // Enter
                 e.preventDefault(); //Firefox bug (innerHTML="" => no height and left aligned)
-                if(document.activeElement == this.highlightField.HTMLElement) {
+                if(this.isHighlightFieldFocused()) {
                     let newfield    = new Datafield();
                     let parent      = this.getParent(this.highlightField);
-                    newfield.setParent(parent, parent.indexOf(this.highlightField)+1);
+                    let siblingsPos = parent.indexOf(this.highlightField)+1;
+                    if(parent != this.defaultfield)
+                        newfield.setParent(parent, siblingsPos);
+                    else
+                        this.defaultfield.childrenIds.splice(siblingsPos, 0, newfield.id);
+                    
     
                     this.datafields.splice(this.datafields.indexOf(this.highlightField)+1, 0, newfield);
                     this.updateDisplay();
                     newfield.HTMLElement.focus();
                 } else
-                this.highlightField.HTMLElement.focus();
+                    this.highlightField.HTMLElement.focus();
             }
 
             if (e.keyCode == 27) { // ESC
                 this.highlightField.HTMLElement.blur();
             }
 
-            if (e.keyCode == 37) { // left
+            if (e.keyCode == 37 && !this.isHighlightFieldFocused()) { // left
                 this.focus(this.columns[this.activeColPos+this.baseColIndex+1]);
             }
             
-            if (e.keyCode == 39 ) { // right
+            if (e.keyCode == 39 && !this.isHighlightFieldFocused()) { // right
                 this.focus(this.columns[this.activeColPos+this.baseColIndex-1]);
             }
         });
