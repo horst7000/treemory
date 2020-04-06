@@ -60,7 +60,7 @@ export default class {
         this.column.style.backgroundColor = this.color;
         this.column.style.width = width+"%";
         this.column.style.right = -12+(pos-1)*width+"%";
-        this.column.style.zIndex = this.maxPos+2-(pos+1); // max 10 columns
+        this.column.style.zIndex = this.maxPos+2-(Math.round(pos)+1); // max 10 columns
     }
     
     smoothUpdateStyle(duration) {
@@ -158,7 +158,7 @@ export default class {
 
     addClickListener() {
         this.column.addEventListener("mousedown",() => this.click());
-        // this.column.addEventListener("touchstart", (e) => this.click());
+        this.column.addEventListener("touchmove", (e) => this.click());
         this.column.addEventListener("wheel", () => this.click());
     }
 

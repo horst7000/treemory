@@ -15,7 +15,7 @@ export default class {
         // this.maxPos = this.columns.length-1;
 
         this.maxPos = 3;
-        this.colors = ["#447cff", "#454545", "#3aed35"];
+        this.colors = ["#447cff", "#373737", "#277316"];
         for (let i = 0; i <= this.maxPos+2; i++) {
             this.appendColumn(this.colors[i%3], i, this.maxPos);
         }
@@ -45,7 +45,7 @@ export default class {
         col.onMidChange((e) => {
             this.activeColPos   = e.column.pos;
             this.updateHighlightField();
-            // this.updateEmptyChildren();
+            this.updateEmptyChildren();
             if(!this.isHighlightFieldFocused())
                 document.activeElement.blur();
         });
@@ -227,7 +227,8 @@ export default class {
 
     updateEmptyChildren() {
         this.datafields.forEach(datafield => {
-            if(datafield.childrenIds.length == 0 && datafield.HTMLElement.value == ""
+            if(datafield.childrenIds.length == 0
+                && (datafield.value == "" || datafield.value == "<br>")
                 && datafield.parentIds[0] != this.highlightField.id
                 && datafield.id != this.highlightField.id) {
                 this.remove(datafield);
@@ -319,14 +320,19 @@ export default class {
             });
     }
 
-    // remove(removefield) {
-    //     this.datafields = this.datafields.filter((field) => field.id != removefield.id);
-    //     this.columns[removefield.pos].remove(removefield);
-    //     removefield.parentIds.forEach(pId => {
-    //         let parent = this.datafieldById(pId);
-    //         parent.childrenIds = parent.childrenIds.filter(cId => cId != removefield.id);
-    //     });
-    // }
+    remove(removefield) {
+        if(removefield.HTMLElement && removefield.HTMLElement.parentNode)
+            removefield.HTMLElement.parentNode.removeChild(removefield.HTMLElement);
+        if(removefield.container && removefield.container.parentNode)
+            removefield.container.parentNode.removeChild(removefield.container.HTMLElement);
+        
+        let parent = this.getParent(removefield);
+        parent.childrenIds = parent.childrenIds.filter(cId => cId != removefield.id);
+        if(parent.lastSelectedChild == removefield)
+            delete parent.lastSelectedChild;
+
+        this.datafields = this.datafields.filter((field) => field.id != removefield.id);
+    }
 
     focus(column) {
         if(column.pos <= this.activeColPos) {

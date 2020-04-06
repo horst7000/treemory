@@ -127,7 +127,7 @@ p.hgl {
 
 p.active {
     color: white;
-    border-bottom-color: lightgray;
+    border-bottom-color: white;
 }
 
 .fadein {
