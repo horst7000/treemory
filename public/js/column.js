@@ -9,12 +9,9 @@ export default class {
         this.updateStyle(pos);
 
         
-        this.midtable = document.createElement("div");
-        this.midtable.classList.add("mid-table");
         this.midcell  = document.createElement("div");
         this.midcell.classList.add("mid-cell");
-        this.midtable.appendChild(this.midcell)
-        this.column.appendChild(this.midtable);
+        this.column.appendChild(this.midcell);
 
         this.onMidChangeFn  = function(){};
         this.onFocusFn      = function(){};

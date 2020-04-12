@@ -14,7 +14,7 @@ export default class {
         // this.columns.push(new Column("#454545", 4));
         // this.maxPos = this.columns.length-1;
 
-        this.maxPos = 3;
+        this.maxPos = Math.ceil(1.5 + window.innerWidth/600);
         this.colors = ["#447cff", "#373737", "#277316"];
         for (let i = 0; i <= this.maxPos+2; i++) {
             this.appendColumn(this.colors[i%3], i, this.maxPos);
@@ -33,6 +33,10 @@ export default class {
 
         this.addControls();
     }
+
+    // onFieldChange(callback) { // callback(field) { ... }
+    //     this.onFieldChangeFn = callback;
+    // }
 
     appendColumn(color, pos) {
         let col = new Column(color, pos, this.maxPos);
@@ -56,7 +60,11 @@ export default class {
     }
 
     whereAmI() {
-
+        return this.highlightField;
+        // return {
+        //     value: this.highlightField.value,
+        //     id: this.highlightField.id
+        // }
     }
 
     /**
@@ -129,7 +137,6 @@ export default class {
     updateDisplay() {
         console.log("display "+this.highlightField.value+" at "+this.activeColPos);
         this.display(this.highlightField, this.activeColPos);
-        console.log(this.containerIndexPerCol);
     }
 
     display(field, at) {  // at = this.activeColPos
@@ -165,6 +172,8 @@ export default class {
             this.keepOrDelete(field);
         });
         this.keepOrDelete(this.defaultfield);
+        
+        this.updateMiddleFields();
     }
 
     keepOrDelete(field) {

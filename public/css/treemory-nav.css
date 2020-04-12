@@ -35,6 +35,7 @@ h1 {
     clear: both;
 } */
 
+
 .row {
     text-align: center;
     font-family: Candara, Calibri, Segoe, Segoe UI, Optima, Arial, sans-serif;
@@ -75,6 +76,7 @@ h1 {
     font-size: 16px;
     min-height: 19px;
     width: 82%;
+    word-wrap: break-word;
     border: 0 solid #b2b2b2;
     border-width: 0px 0px 1px 0px;
     padding: 5px;
@@ -106,11 +108,16 @@ h1 {
     display: table;   
     width: 100%;
     height: 100%;
+    table-layout: fixed;
 }
 
+
 .mid-cell {
-    display: table-cell;
-    vertical-align: middle;
+    /* display: table-cell; */
+    /* vertical-align: middle; */
+    position: relative;
+    top: 50%;
+    transform: translateY(-50%);
     width: 100%;
     /* padding-left: 5%; */
 }
@@ -137,3 +144,4 @@ p.active {
     0%, 33% {opacity:0}
     100% {opacity:1}
 }
+

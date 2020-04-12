@@ -1,7 +1,11 @@
 html
   head
     meta(name='viewport' content='width=device-width, initial-scale=1')
-    link(rel='stylesheet' href='/css/my.css')
+    link(rel='stylesheet' href='/css/treemory-nav.css')
+    link(rel='stylesheet' href='/css/mathekarte.css')
+    script.
+      MathJax = { options: { skipHtmlTags: ['p'], processHtmlClass: 'hgl'}  };
+    script#MathJax-script(type='text/javascript' async='' src='https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js')
     title treemory
   body
     //- div.row
@@ -20,5 +24,30 @@ html
     //-         p#moves
     //-         input
 
-  
+    //- mathekarte
+    img(src="/img/save.png", alt="diskette", draggable="false")#btn-save
+    div.dialogue.hidden#dialogue-save
+      div.dialogue-header
+        h1 save
+        button.btn-close#dialogue-save-btn-close &times;
+      p enter permanent short name (can't be changed)
+      form(action="javascript: saveForm()")
+        label#dialogue-save-pre-id
+        input(
+          pattern="[A-Za-z]{4}"
+          type="text"
+          title="exactly 4 letters"
+          maxlength="4"
+          size="4"
+          autocomplete="off"
+          required
+          )#dialogue-save-inp-name
+        br
+        input(type="submit" value="save").btn-dialogue
+        button(onclick="return false").btn-dialogue#dialogue-save-btn-cancel cancel
+    
+    //- treemory
+    div.modi
+      img(src="/img/mathmode.png", alt="mathematical formula", draggable="false")#mathmode
     script(type='module' src= '/js/memotree.js')
+    //- script(type='module' src= '/js/saveform.js')

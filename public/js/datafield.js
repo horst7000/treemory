@@ -50,7 +50,7 @@ export default class {
     }
 
     get value() {
-        return this.HTMLElement?this.HTMLElement.innerHTML:this._value;
+        return this.HTMLElement?this.HTMLElement.innerHTML:this._value; //this._value in case of not displayed
     }
 
     set value(val) {
