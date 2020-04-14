@@ -63,6 +63,7 @@ let shortname = "";
     if(paths[1] && !mapdata || paths[1] && !mapdata.data)
         window.location.replace("/");
     
+    // nav.import( JSON.parse(localStorage.getItem("default-tree")) );
     nav.import( mapdata && mapdata.data ? mapdata.data : nested );
 
     if(paths[1]) {

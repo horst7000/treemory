@@ -38,29 +38,6 @@ export default class {
     //     this.onFieldChangeFn = callback;
     // }
 
-    appendColumn(color, pos) {
-        let col = new Column(color, pos, this.maxPos);
-        if(pos == 0)
-            this.columns.splice(pos, 0, col);
-        else
-            this.columns.push(col);
-        this.row.appendChild(col.HTMLElement);
-        
-        col.onMidChange((e) => {
-            this.activeColPos   = e.column.pos;
-            this.updateHighlightField();
-            this.updateEmptyChildren();
-            if(!this.isHighlightFieldFocused())
-                document.activeElement.blur();
-        });
-
-        col.onFocus((e) => {
-            this.focus(e.column);
-        });
-
-        col.onSwipeX((distx) => this.onSwipeX(distx));
-    }
-
     whereAmI() {
         return this.highlightField;
         // return {
@@ -146,6 +123,29 @@ export default class {
             date.children.forEach(childdata => {
                 this.createRecursive(childdata, child);
             });
+    }
+
+    appendColumn(color, pos) {
+        let col = new Column(color, pos, this.maxPos);
+        if(pos == 0)
+            this.columns.splice(pos, 0, col);
+        else
+            this.columns.push(col);
+        this.row.appendChild(col.HTMLElement);
+        
+        col.onMidChange((e) => {
+            this.activeColPos   = e.column.pos;
+            this.updateHighlightField();
+            this.updateEmptyChildren();
+            if(!this.isHighlightFieldFocused())
+                document.activeElement.blur();
+        });
+
+        col.onFocus((e) => {
+            this.focus(e.column);
+        });
+
+        col.onSwipeX((distx) => this.onSwipeX(distx));
     }
 
     updateDisplay() {
@@ -528,6 +528,16 @@ export default class {
             if (e.keyCode == 39 && !this.isHighlightFieldFocused()) { // right
                 this.focus(this.columns[this.activeColPos+this.baseColIndex-1]);
             }
+
+            
+            if (e.keyCode == 9) { // tab
+                e.preventDefault();
+                if(!e.shiftKey)
+                    this.focus(this.columns[this.activeColPos+this.baseColIndex+1]); // (left)
+                else // shift + tab
+                    this.focus(this.columns[this.activeColPos+this.baseColIndex-1]); // (right)
+            }
+            
         });
     }
 

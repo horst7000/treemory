@@ -65,9 +65,9 @@ h1 {
     left: 0%;
     width: 0;
     height: 0;
-    border-top: 0.8vw solid transparent;
-    border-left: 1.6vw solid white;
-    border-bottom: 0.8vw solid transparent;
+    border-top: 6px solid transparent;
+    border-left: 11px solid white;
+    border-bottom: 6px solid transparent;
 }
 
 .column p {
@@ -85,13 +85,14 @@ h1 {
     background-color: transparent;
     text-align: center;
     cursor: default;
+    user-select: none;
     /* transform: rotate(2deg); */
 }
 
-.column p::selection {
+/* .column p::selection {
     opacity: 0.7;
     color: lightblue;
-}
+} */
 
 /* hr {
     height: 1%;
@@ -99,7 +100,7 @@ h1 {
 } */
 
 .siblings {
-    padding: 2vw;
+    padding: 2vh;
     padding-left: 0;
     padding-right: 0;
     /* border: 1px dashed white; */
@@ -137,6 +138,7 @@ p.hgl {
     font-weight: bold;
     border-bottom-width: 2px;
     cursor: auto;
+    user-select: auto;
 }
 
 p.active {
