@@ -84,7 +84,13 @@ h1 {
     margin-left: 8%;
     background-color: transparent;
     text-align: center;
+    cursor: default;
     /* transform: rotate(2deg); */
+}
+
+.column p::selection {
+    opacity: 0.7;
+    color: lightblue;
 }
 
 /* hr {
@@ -130,6 +136,7 @@ h1 {
 p.hgl {
     font-weight: bold;
     border-bottom-width: 2px;
+    cursor: auto;
 }
 
 p.active {

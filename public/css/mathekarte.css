@@ -10,11 +10,11 @@
     background-image: url(../img/save.png);
     background-repeat: round;
     cursor: pointer;
+    user-select: none;
 }
-#btn-save:active {
-    transform:rotateY(0.2turn);
+#btn-save:hover {
+    transform:rotateY(0.07turn);
 }
-
 /* {
     transform: rotateY(0.2turn);
 } */

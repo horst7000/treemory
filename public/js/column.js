@@ -12,9 +12,11 @@ export default class {
         this.midcell  = document.createElement("div");
         this.midcell.classList.add("mid-cell");
         this.column.appendChild(this.midcell);
+        this.pos = pos;
 
         this.onMidChangeFn  = function(){};
         this.onFocusFn      = function(){};
+        this.onSwipeXFn     = function(){};
 
         this._middleFieldEl;
 
@@ -38,6 +40,7 @@ export default class {
     set pos(pos) {
         this._oldPos = this._pos;
         this._pos    = pos;
+        this.midcell.dataset.pos = pos;
     }
 
     get sc() {
@@ -86,6 +89,10 @@ export default class {
 
     onFocus(fn) {
         this.onFocusFn = fn;
+    }
+
+    onSwipeX(fn) {
+        this.onSwipeXFn = fn;
     }
 
     append(siblingContainer, pos) {
@@ -154,30 +161,46 @@ export default class {
     }
 
     addClickListener() {
-        this.column.addEventListener("mousedown",() => this.click());
-        this.column.addEventListener("touchmove", (e) => this.click());
+        this.column.addEventListener("mousedown",() => this.click()); // includes touch "click/tap"
+        // this.column.addEventListener("touchmove", (e) => this.click());
         this.column.addEventListener("wheel", () => this.click());
     }
 
     addTouchListener() {
+        let swipeX, swipeY;
+        let startx, starty;
+        let lastx,  lasty;
+        let starttime;
         this.column.addEventListener("touchstart", (e) => {
             let touchobj = e.changedTouches[0]; // first finger
-            this.startx = parseInt(touchobj.clientX);
-            this.starty = parseInt(touchobj.clientY);
-            this.lastx = this.startx;
-            this.lasty = this.starty;
+            startx = parseInt(touchobj.clientX);
+            starty = parseInt(touchobj.clientY);
+            lastx = startx;
+            lasty = starty;
+            swipeX = false;
+            swipeY = false;
+            starttime = new Date().getTime();
          });
     
          this.column.addEventListener("touchmove", (e) => {
+            if(swipeX) return;
+            if(e.changedTouches.length > 1) return;
             let touchobj = e.changedTouches[0]; // first finger
             let clientx = parseInt(touchobj.clientX);
             let clienty = parseInt(touchobj.clientY);
-            let distx = clientx - this.lastx;
-            let disty = clienty - this.lasty;
-            this.lastx = clientx;
-            this.lasty = clienty; 
-            e.preventDefault();
+            let distx = clientx - lastx;
+            let disty = clienty - lasty;
+            lastx = clientx;
+            lasty = clienty; 
+            swipeX = (Math.abs(distx) > 6 && Math.abs(disty) < 4 && !swipeY || swipeX)
+            swipeY = (Math.abs(disty) > 3 && Math.abs(distx) < 4 && !swipeX || swipeY)
+            console.log(swipeY);
+            // if(swipeY || swipeX)
+            //     e.preventDefault();
             this.controlDY(disty);
+            if(swipeX) {
+                this.onSwipeXFn(distx);
+            }
          });
     }
 

@@ -75,6 +75,14 @@ let shortname = "";
     
 })();
 
+function openSaveFormOrSave() {
+    if(shortname.length == 3)
+        document.getElementById("dialogue-save").classList.toggle("hidden");
+    else
+        save();
+    animateBtn(document.getElementById("btn-save"));
+}
+
 window.saveForm = function() {
     document.getElementById("dialogue-save").classList.toggle("hidden");
     save();
@@ -98,6 +106,12 @@ function save() {
     // history.pushState({}, nav.whereAmI().value, nav.whereAmI().id);
 }
 
+function animateBtn(btn) {
+    btn.style.transform = "rotateY(0.2turn)";
+    setTimeout(() => btn.style.transform = "", 100);
+}
+
+
 /**
  * 
  * 
@@ -113,7 +127,7 @@ window.onpopstate = (e) => {
 window.addEventListener('keydown', (e) => {
     if (e.keyCode == 83 && e.ctrlKey) { // ctrl+s
         e.preventDefault();
-        save();
+        openSaveFormOrSave();
     }
 });
 
@@ -133,13 +147,11 @@ document.getElementById("mathmode").addEventListener("click", (e) => {
         // MathJax.startup.document.clear();
         // TODO MathJax.startup.document.math = filter(m => m != math)
     }
+    animateBtn(e.target);
 });
 
 document.getElementById("btn-save").addEventListener("click", (e) => {
-    if(shortname.length == 3)
-        document.getElementById("dialogue-save").classList.toggle("hidden");
-    else
-        save();
+    openSaveFormOrSave();
 });
 
 document.getElementById("dialogue-save-btn-close").addEventListener("click", (e) => {

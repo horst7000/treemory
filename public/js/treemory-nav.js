@@ -57,6 +57,8 @@ export default class {
         col.onFocus((e) => {
             this.focus(e.column);
         });
+
+        col.onSwipeX((distx) => this.onSwipeX(distx));
     }
 
     whereAmI() {
@@ -134,6 +136,18 @@ export default class {
 
     // private
 
+    createRecursive(date, parent) {
+        let child = new Datafield(date.value);
+        if(parent) child.parent = parent;
+        this.datafields.push(child);
+
+        // call for each child
+        if(date.children)
+            date.children.forEach(childdata => {
+                this.createRecursive(childdata, child);
+            });
+    }
+
     updateDisplay() {
         console.log("display "+this.highlightField.value+" at "+this.activeColPos);
         this.display(this.highlightField, this.activeColPos);
@@ -192,9 +206,7 @@ export default class {
             child.keepContainer = true;
             if(!child.HTMLElement.parentNode) {        
                 child.HTMLElement.classList.add("fadein");
-                child.HTMLElement.addEventListener("focus", (e) => {
-                    this.columns[displayColIndex].middleFieldEl = child.HTMLElement;
-                });
+                this.addDatafieldEventListeners(child);
                 parent.container.append(child, childContainerPos);
             }
             // append container of children
@@ -213,20 +225,43 @@ export default class {
         });
     }
 
-    createRecursive(date, parent) {
-        let child = new Datafield(date.value);
-        if(parent) child.parent = parent;
-        this.datafields.push(child);
+    addDatafieldEventListeners(datafield) {     
+        datafield.HTMLElement.addEventListener("click", (e) => {
+            let pos = this.baseColIndex + parseInt(e.target.parentNode.parentNode.dataset.pos);
+            this.columns[pos].middleFieldEl = datafield.HTMLElement;
+            datafield.HTMLElement.focus();
+        });
+        datafield.HTMLElement.addEventListener("dragover", (e) => {
+            e.preventDefault();
+        });
+        datafield.HTMLElement.addEventListener("drop", (e) => {
+            e.preventDefault();
+            let targetid  = e.target.dataset.id;
+            let dropid    = e.dataTransfer.getData("text");
+            if(targetid == dropid) return;
 
-        // call for each child
-        if(date.children)
-            date.children.forEach(childdata => {
-                this.createRecursive(childdata, child);
-            });
-    }
+            let targetfield = this.datafieldById(targetid);
+            targetfield.ondragleave();        
 
-    getParent(field) {
-        return this.datafieldById(field.parentIds[0]) || this.defaultfield;
+            let droppedfield  = this.datafieldById(dropid);
+            let targetparent  = this.getParent(targetfield);
+            let targetSiblingsPos = targetparent.childrenIds.indexOf(targetfield.id);
+            
+            if(!droppedfield)
+                return;
+
+            if(this.isFieldDescendantOf(targetfield, droppedfield))
+                return;
+
+            this.removeFromHTML(droppedfield);
+            this.removeFromParent(droppedfield);
+            this.removeContainerRecursive(droppedfield.id);
+
+            // set new parent of droppedfield
+            this.connectParentChildAt(targetparent, droppedfield, targetSiblingsPos+1);
+
+            this.updateDisplay();            
+        });
     }
 
     updateActiveFields() {
@@ -282,11 +317,13 @@ export default class {
     // needs activeColPos to be set correctly
     updateHighlightField(field) {
         if(!field)
-            field = this.datafieldById(this.columns[this.activeColPos+this.baseColIndex].getMiddleFieldEl().id)
+            field = this.datafieldById(this.columns[this.activeColPos+this.baseColIndex]
+                                        .getMiddleFieldEl().dataset.id)
         if(!field) return;
         this.highlightField = field;
         this.cleanHighlightClass();
         field.HTMLElement.classList.add("hgl");
+        field.HTMLElement.contentEditable = true;
         // this.getParent(field).lastSelectedChild = field;
         let child   = field;
         let parent  = this.getParent(field);
@@ -312,8 +349,10 @@ export default class {
     }
 
     cleanHighlightClass() {
-        for(let el of document.getElementsByClassName("hgl"))
-            el.classList.remove("hgl");    
+        for(let el of document.getElementsByClassName("hgl")) {
+            el.classList.remove("hgl");
+            el.contentEditable = false;
+        }
     }
 
     setActiveRecursive(startId, pos) {
@@ -330,21 +369,60 @@ export default class {
     }
 
     remove(removefield) {
-        if(removefield.HTMLElement && removefield.HTMLElement.parentNode)
-            removefield.HTMLElement.parentNode.removeChild(removefield.HTMLElement);
-        if(removefield.container && removefield.container.parentNode)
-            removefield.container.parentNode.removeChild(removefield.container.HTMLElement);
-        
-        let parent = this.getParent(removefield);
-        parent.childrenIds = parent.childrenIds.filter(cId => cId != removefield.id);
-        if(parent.lastSelectedChild == removefield)
-            delete parent.lastSelectedChild;
-
+        this.removeFromHTML(removefield);
+        this.removeFromParent(removefield);
         this.datafields = this.datafields.filter((field) => field.id != removefield.id);
     }
 
+    removeFromHTML(removefield) {
+        if(removefield.HTMLElement && removefield.HTMLElement.parentNode)
+            removefield.HTMLElement.parentNode.removeChild(removefield.HTMLElement);
+        if(removefield.container && removefield.container.parentNode)
+            removefield.container.parentNode.removeChild(removefield.container.HTMLElement);   
+    }
+
+    removeFromParent(removefield) {
+        let parent = this.getParent(removefield);
+        parent.childrenIds = parent.childrenIds.filter(cId => cId != removefield.id);
+        removefield.parentIds = removefield.parentIds.filter(pId => pId != parent.id);
+        if(parent.lastSelectedChild == removefield)
+            delete parent.lastSelectedChild;
+    }
+
+    removeContainerRecursive(startid) {
+        let removefield = this.datafieldById(startid);
+        if(removefield.container && removefield.container.parentNode)
+            removefield.container.parentNode.removeChild(removefield.container.HTMLElement);
+        removefield.childrenIds.forEach(id => {
+            this.removeContainerRecursive(id);
+        });
+    }
+
+    datafieldById(id) { return this.datafields.find((field) => field.id == id) }
+
+    getParent(field) {
+        return this.datafieldById(field.parentIds[0]) || this.defaultfield;
+    }
+
+    isFieldDescendantOf(child, ancestor) {
+        let nextgenfield = this.getParent(child);
+        while(nextgenfield != this.defaultfield) {
+            if(nextgenfield == ancestor)
+                return true;
+            nextgenfield = this.getParent(nextgenfield);
+        }
+        return false;
+    }
+    
+    connectParentChildAt(parent, child, childSiblingsPos) {
+        if(parent != this.defaultfield)
+            child.setParent(parent, childSiblingsPos);
+        else
+            this.defaultfield.childrenIds.splice(childSiblingsPos, 0, child.id);
+    }
+
     focus(column) {
-        if(column.pos <= this.activeColPos) {
+        if(column.pos <= this.activeColPos) { // focus to the right of last highlight column
             if (column.pos == 0 && this.baseColIndex == 0) return;
             let oldPos = this.activeColPos;
             this.activeColPos   = column.pos;
@@ -412,8 +490,6 @@ export default class {
         return document.activeElement == this.highlightField.HTMLElement;
     }
 
-    datafieldById(id) { return this.datafields.find((field) => field.id == id || field.HTMLId == id) }
-
     addControls() {
         window.addEventListener('keydown', (e) => { 
             if (e.keyCode == 40) {
@@ -432,17 +508,13 @@ export default class {
                     let newfield    = new Datafield();
                     let parent      = this.getParent(this.highlightField);
                     let siblingsPos = parent.indexOf(this.highlightField)+1;
-                    if(parent != this.defaultfield)
-                        newfield.setParent(parent, siblingsPos);
-                    else
-                        this.defaultfield.childrenIds.splice(siblingsPos, 0, newfield.id);
-                    
+                    this.connectParentChildAt(parent, newfield, siblingsPos);
     
                     this.datafields.splice(this.datafields.indexOf(this.highlightField)+1, 0, newfield);
                     this.updateDisplay();
-                    newfield.HTMLElement.focus();
+                    newfield.HTMLElement.click();
                 } else
-                    this.highlightField.HTMLElement.focus();
+                    this.highlightField.HTMLElement.click();
             }
 
             if (e.keyCode == 27) { // ESC
@@ -457,5 +529,20 @@ export default class {
                 this.focus(this.columns[this.activeColPos+this.baseColIndex-1]);
             }
         });
+    }
+
+    onSwipeX(distx) {
+        if(distx > 0) {
+            if(this.activeColPos-1 <= 0) //new active col not on screen
+                this.focus(this.columns[this.baseColIndex+2]);
+            this.moveColumnsLeft();
+            
+        } else if(this.baseColIndex > 0) {
+            if(this.activeColPos+1 > this.maxPos)
+                this.focus(this.columns[this.maxPos+this.baseColIndex-1]);
+            console.log(this.activeColPos);
+            this.moveColumnsRight();
+            console.log(this.activeColPos);
+        }
     }
 }

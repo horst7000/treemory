@@ -77,11 +77,43 @@ export default class {
     createHTML() {
         if(this.input) return false;
         this.input                  = document.createElement("p");
-        this.input.contentEditable  = true;
+        // this.input.contentEditable  = true;
+        this.input.contentEditable  = false;
+        this.input.draggable        = true;
+        this.addDragStyleAndDataListener();
         this.input.id               = this.HTMLId;
+        this.input.dataset.id       = this._id;
         this.value                  = this._value;
         this.container              = new SiblingContainer(this._id);
         return this.input;
+    }
+
+    addDragStyleAndDataListener() {
+        this.input.addEventListener("dragstart", e => {
+            e.dataTransfer.setDragImage(e.target,e.layerX,0);
+            this.input.style.textShadow         = "3px 4px 3px black";
+            this.input.style.borderBottomColor  = "darkslategrey";
+            e.dataTransfer.setData("text", this.id);
+        });
+        this.input.addEventListener("dragend", e => {
+            this.input.style.textShadow         = "none";
+            this.input.style.borderBottomColor  = "";
+            this.ondragleave();
+        });
+        this.input.addEventListener("dragover", e => {
+            this.input.style.marginBottom       = "20px";
+            this.input.style.borderBottomWidth  = "3px";
+            this.input.style.transform          = "scale(0.9)";
+        });
+        this.input.addEventListener("dragleave", e => {
+            this.ondragleave();
+        });
+    }
+
+    ondragleave() {
+        this.input.style.marginBottom       = "";
+        this.input.style.borderBottomWidth  = "";
+        this.input.style.transform          = "";
     }
 
     asObj() {
