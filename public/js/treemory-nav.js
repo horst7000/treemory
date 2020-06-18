@@ -15,9 +15,9 @@ export default class {
         // this.maxPos = this.columns.length-1;
 
         this.maxPos = Math.ceil(1.5 + window.innerWidth/600);
-        this.colors = ["#447cff", "#373737", "#277316"];
+        this.colors = ["#2F4B7A", "#37588F"];
         for (let i = 0; i <= this.maxPos+2; i++) {
-            this.appendColumn(this.colors[i%3], i, this.maxPos);
+            this.appendColumn(this.colors[i%this.colors.length], i, this.maxPos);
         }
         this.baseColIndex = 0; //pos 0
 
@@ -149,7 +149,7 @@ export default class {
     }
 
     updateDisplay() {
-        console.log("display "+this.highlightField.value+" at "+this.activeColPos);
+        // console.log("display "+this.highlightField.value+" at "+this.activeColPos);
         this.display(this.highlightField, this.activeColPos);
     }
 
@@ -174,7 +174,7 @@ export default class {
             invisibleParent.createHTML();
         if(!invisibleParent.container.HTMLElement.parentNode)
             this.columns[this.baseColIndex+1].append(invisibleParent.container,0);
-        console.log("base "+invisibleParent.value);
+        // console.log("base "+invisibleParent.value);
         invisibleParent.keepContainer = true;
         this.containerIndexPerCol[1]++;
         this.displayChildren(invisibleParent, 1);
@@ -229,7 +229,7 @@ export default class {
         datafield.HTMLElement.addEventListener("click", (e) => {
             let pos = this.baseColIndex + parseInt(e.target.parentNode.parentNode.dataset.pos);
             this.columns[pos].middleFieldEl = datafield.HTMLElement;
-            datafield.HTMLElement.focus();
+            // datafield.HTMLElement.focus();
         });
         datafield.HTMLElement.addEventListener("dragover", (e) => {
             e.preventDefault();
@@ -302,7 +302,7 @@ export default class {
                             break;
                         }
             if(col.pos == hglPos) {
-                return;
+                act = child.HTMLElement;
             }
             if(col.pos > hglPos && child.lastSelectedChild) {
                 child = child.lastSelectedChild;
@@ -435,7 +435,7 @@ export default class {
             }
             this.updateHighlightField();
         }
-        else { // select most left highlight field (following actives)
+        else { // select most left field (following lastSelectedChilds)
             let newHgl;
             newHgl = this.highlightField;
             while(newHgl.lastSelectedChild && this.activeColPos < column.pos) {
@@ -464,7 +464,7 @@ export default class {
         });
 
         if(this.columns[this.columns.length-1].pos == this.maxPos+1)
-            this.appendColumn(this.colors[this.columns.length%3], this.maxPos+2);
+            this.appendColumn(this.colors[this.columns.length%this.colors.length], this.maxPos+2);
 
         this.baseColIndex++;
         this.activeColPos--;
@@ -505,6 +505,7 @@ export default class {
             if (e.keyCode == 13) { // Enter
                 e.preventDefault(); //Firefox bug (innerHTML="" => no height and left aligned)
                 if(this.isHighlightFieldFocused()) {
+                    // inserts new datafield below
                     let newfield    = new Datafield();
                     let parent      = this.getParent(this.highlightField);
                     let siblingsPos = parent.indexOf(this.highlightField)+1;
@@ -513,8 +514,9 @@ export default class {
                     this.datafields.splice(this.datafields.indexOf(this.highlightField)+1, 0, newfield);
                     this.updateDisplay();
                     newfield.HTMLElement.click();
+                    newfield.HTMLElement.focus();
                 } else
-                    this.highlightField.HTMLElement.click();
+                    this.highlightField.HTMLElement.focus();
             }
 
             if (e.keyCode == 27) { // ESC
@@ -550,9 +552,7 @@ export default class {
         } else if(this.baseColIndex > 0) {
             if(this.activeColPos+1 > this.maxPos)
                 this.focus(this.columns[this.maxPos+this.baseColIndex-1]);
-            console.log(this.activeColPos);
             this.moveColumnsRight();
-            console.log(this.activeColPos);
         }
     }
 }

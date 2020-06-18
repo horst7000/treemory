@@ -1,5 +1,3 @@
-const PRE_DF_ID = "field";
-
 import SiblingContainer from "./siblingContainer.js";
 
 export default class {
@@ -23,7 +21,6 @@ export default class {
             this.parentIds      = [];
         }
         
-        this.HTMLId          = PRE_DF_ID+this.id;
         this.lastSelectedChild;
     }
 

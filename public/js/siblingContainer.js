@@ -1,12 +1,8 @@
-const PRE_SC_ID = "children";
-
 export default class {
     constructor(parentId) {
         this.parentId    = parentId;
-        this.HTMLId      = PRE_SC_ID+parentId;
         this.HTMLElement = document.createElement("div");
         this.HTMLElement.classList.add("siblings");
-        this.HTMLElement.id = this.HTMLId;
     }
 
     get id() {

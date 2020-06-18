@@ -19,13 +19,13 @@ export default class {
         this.onSwipeXFn     = function(){};
 
         this._middleFieldEl;
-
+        
         this.dy = 0;
         this.lastx = this.lasty = this.startx = this.starty = 0;
         this.sumWheelY = 0;
-
+        
         this.addClickListener();
-        this.addTouchListener();
+        this.addSwipeListener();
         this.addWheelListener();
     }
 
@@ -166,41 +166,57 @@ export default class {
         this.column.addEventListener("wheel", () => this.click());
     }
 
-    addTouchListener() {
-        let swipeX, swipeY;
-        let startx, starty;
-        let lastx,  lasty;
-        let starttime;
+    startSwipe(startX, startY) {
+        this.swipeevent.lastX     = startX;
+        this.swipeevent.lastY     = startY;
+        this.swipeevent.swipeX    = false;
+        this.swipeevent.swipeY    = false;
+    }
+
+    handleSwipe(clientX, clientY) {
+        const swipeY = this.swipeevent.swipeY;
+        const swipeX = this.swipeevent.swipeX;
+        let distx = clientX - this.swipeevent.lastX;
+        let disty = clientY - this.swipeevent.lastY;
+        this.swipeevent.lastX = clientX;
+        this.swipeevent.lastY = clientY;
+        this.swipeevent.swipeX = (Math.abs(distx) > 6 && Math.abs(disty) < 4 && !swipeY || swipeX)
+        this.swipeevent.swipeY = (Math.abs(disty) > 3 && Math.abs(distx) < 4 && !swipeX || swipeY)
+        
+        this.controlDY(disty);
+        if(this.swipeevent.swipeX) {
+            this.onSwipeXFn(distx);
+        }
+    }
+
+    addSwipeListener() {        
+        this.swipeevent = {};
+        this.column.addEventListener("mousedown", (e) => {
+            this.startSwipe(e.clientX, e.clientY);            
+            window.getSelection().removeAllRanges();
+         });
+    
+         this.column.addEventListener("mousemove", (e) => {
+            const buttonPressedCode = e.buttons !== undefined ? e.buttons : e.nativeEvent.which; // e.buttons not supported in Safari 
+            if(buttonPressedCode != 1) return;
+            if(this.swipeevent.swipeX) return;    
+            this.handleSwipe(e.clientX, e.clientY);
+         });
+        
         this.column.addEventListener("touchstart", (e) => {
             let touchobj = e.changedTouches[0]; // first finger
-            startx = parseInt(touchobj.clientX);
-            starty = parseInt(touchobj.clientY);
-            lastx = startx;
-            lasty = starty;
-            swipeX = false;
-            swipeY = false;
-            starttime = new Date().getTime();
+            let startx = parseInt(touchobj.clientX);
+            let starty = parseInt(touchobj.clientY);
+            this.startSwipe(startx, starty);
          });
     
          this.column.addEventListener("touchmove", (e) => {
-            if(swipeX) return;
+            if(this.swipeevent.swipeX) return;
             if(e.changedTouches.length > 1) return;
             let touchobj = e.changedTouches[0]; // first finger
             let clientx = parseInt(touchobj.clientX);
-            let clienty = parseInt(touchobj.clientY);
-            let distx = clientx - lastx;
-            let disty = clienty - lasty;
-            lastx = clientx;
-            lasty = clienty; 
-            swipeX = (Math.abs(distx) > 6 && Math.abs(disty) < 4 && !swipeY || swipeX)
-            swipeY = (Math.abs(disty) > 3 && Math.abs(distx) < 4 && !swipeX || swipeY)
-            console.log(swipeY);
-            // if(swipeY || swipeX)
-            //     e.preventDefault();
-            this.controlDY(disty);
-            if(swipeX) {
-                this.onSwipeXFn(distx);
-            }
+            let clienty = parseInt(touchobj.clientY);        
+            this.handleSwipe(clientx, clienty);
          });
     }
 
