@@ -21,7 +21,6 @@ export default class {
         this._middleFieldEl;
         
         this.dy = 0;
-        this.lastx = this.lasty = this.startx = this.starty = 0;
         this.sumWheelY = 0;
         
         this.addClickListener();
@@ -59,8 +58,7 @@ export default class {
         let width = 94/(this.maxPos);
         this.column.style.backgroundColor = this.color;
         this.column.style.width = width+"%";
-        this.column.style.right = -12+(pos-1)*width+"%";
-        this.column.style.zIndex = this.maxPos+2-(Math.round(pos)+1); // max 10 columns
+        this.column.style.left = 3+(pos-1)*width+"%";
     }
     
     smoothUpdateStyle(duration) {
@@ -164,7 +162,7 @@ export default class {
         this.column.addEventListener("mousedown",() => this.click()); // includes touch "click/tap"
         // this.column.addEventListener("touchmove", (e) => this.click());
         this.column.addEventListener("wheel", () => {
-            if (!this._middleFieldEl.classList.contains("hgl"))
+            if (!this._middleFieldEl || !this._middleFieldEl.classList.contains("hgl"))
                 this.click();
         });
     }

@@ -358,7 +358,7 @@ export default class {
     setActiveRecursive(startId, pos) {
         let startfield = this.datafieldById(startId);
         startfield.HTMLElement.classList.add("active");
-        if(pos >= this.activeColPos && pos < this.maxPos)
+        if(pos >= this.activeColPos && pos <= this.maxPos)
             startfield.childrenIds.forEach(id => {
                 this.setActiveRecursive(id, pos+1);
             });
@@ -422,7 +422,7 @@ export default class {
     }
 
     focus(column) {
-        if(column.pos <= this.activeColPos) { // focus to the right of last highlight column
+        if(column.pos <= this.activeColPos) { // focus to the left of last highlight column
             if (column.pos == 0 && this.baseColIndex == 0) return;
             let oldPos = this.activeColPos;
             this.activeColPos   = column.pos;
@@ -431,11 +431,12 @@ export default class {
                     this.highlightField = this.getParent(this.highlightField);
                     oldPos--;
                 }
-                this.moveColumnsRight();
+                this.moveColumnsLeft();
             }
             this.updateHighlightField();
         }
-        else { // select most left field (following lastSelectedChilds)
+        else {
+            // select most right field (following lastSelectedChilds)
             let newHgl;
             newHgl = this.highlightField;
             while(newHgl.lastSelectedChild && this.activeColPos < column.pos) {
@@ -453,11 +454,11 @@ export default class {
             }
             
             if(column.pos == this.maxPos+1 && this.activeColPos == this.maxPos+1)
-                this.moveColumnsLeft();
+                this.moveColumnsRight();
         }  
     }
 
-    moveColumnsLeft() {
+    moveColumnsRight() {
         this.columns.forEach(col => {
             col.pos--;
             col.smoothUpdateStyle(400);
@@ -471,7 +472,7 @@ export default class {
         this.updateDisplay();
     }
 
-    moveColumnsRight() {
+    moveColumnsLeft() {
         this.columns.forEach(col => {
             col.pos++;
             col.smoothUpdateStyle(400);
@@ -524,11 +525,11 @@ export default class {
             }
 
             if (e.keyCode == 37 && !this.isHighlightFieldFocused()) { // left
-                this.focus(this.columns[this.activeColPos+this.baseColIndex+1]);
+                this.focus(this.columns[this.activeColPos+this.baseColIndex-1]);
             }
             
             if (e.keyCode == 39 && !this.isHighlightFieldFocused()) { // right
-                this.focus(this.columns[this.activeColPos+this.baseColIndex-1]);
+                this.focus(this.columns[this.activeColPos+this.baseColIndex+1]);
             }
 
             
@@ -544,15 +545,15 @@ export default class {
     }
 
     onSwipeX(distx) {
-        if(distx > 0) {
+        if(distx < 0) {
             if(this.activeColPos-1 <= 0) //new active col not on screen
                 this.focus(this.columns[this.baseColIndex+2]);
-            this.moveColumnsLeft();
+            this.moveColumnsRight();
             
         } else if(this.baseColIndex > 0) {
             if(this.activeColPos+1 > this.maxPos)
                 this.focus(this.columns[this.maxPos+this.baseColIndex-1]);
-            this.moveColumnsRight();
+            this.moveColumnsLeft();
         }
     }
 }
