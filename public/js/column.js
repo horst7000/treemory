@@ -163,7 +163,10 @@ export default class {
     addClickListener() {
         this.column.addEventListener("mousedown",() => this.click()); // includes touch "click/tap"
         // this.column.addEventListener("touchmove", (e) => this.click());
-        this.column.addEventListener("wheel", () => this.click());
+        this.column.addEventListener("wheel", () => {
+            if (!this._middleFieldEl.classList.contains("hgl"))
+                this.click();
+        });
     }
 
     startSwipe(startX, startY) {
