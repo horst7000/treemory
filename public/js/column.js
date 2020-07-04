@@ -172,9 +172,15 @@ export default class {
         this.swipeevent.lastY     = startY;
         this.swipeevent.swipeX    = false;
         this.swipeevent.swipeY    = false;
+        this.swipeevent.noswipe   = false;
+    }
+
+    noswipe() {
+        this.swipeevent.noswipe = true;
     }
 
     handleSwipe(clientX, clientY) {
+        if(this.swipeevent.noswipe) return;
         const swipeY = this.swipeevent.swipeY;
         const swipeX = this.swipeevent.swipeX;
         let distx = clientX - this.swipeevent.lastX;
@@ -193,13 +199,16 @@ export default class {
     addSwipeListener() {        
         this.swipeevent = {};
         this.column.addEventListener("mousedown", (e) => {
-            this.startSwipe(e.clientX, e.clientY);            
+            if(!(e.target.dataset.id))
+                this.startSwipe(e.clientX, e.clientY);
+            else
+                this.noswipe();
             window.getSelection().removeAllRanges();
          });
     
          this.column.addEventListener("mousemove", (e) => {
             const buttonPressedCode = e.buttons !== undefined ? e.buttons : e.nativeEvent.which; // e.buttons not supported in Safari 
-            if(buttonPressedCode != 1) return;
+            if(buttonPressedCode != 1) return; // if not left klick hold
             if(this.swipeevent.swipeX) return;    
             this.handleSwipe(e.clientX, e.clientY);
          });

@@ -1,5 +1,9 @@
 html
   head
+    link(rel='apple-touch-icon' sizes='180x180' href='/img/favicon/apple-touch-icon.png')
+    link(rel='icon' type='image/png' sizes='32x32' href='/img/favicon/favicon-32x32.png')
+    link(rel='icon' type='image/png' sizes='16x16' href='/img/favicon/favicon-16x16.png')
+    link(rel='manifest' href='/img/favicon/site.webmanifest')
     meta(name='viewport' content='width=device-width, initial-scale=1')
     -var cntnt = "Ultimativer Notizblock mit unendlicher Schachtelung. "
     -cntnt = cntnt + "Aktuell ein Prototyp, entsteht hier ein intuitives Werkzeug um Dinge zu lernen und dabei die Übersicht über Themen zu behalten."
@@ -9,7 +13,7 @@ html
     script.
       MathJax = { options: { skipHtmlTags: ['p'], processHtmlClass: 'hgl'}  };
     script#MathJax-script(type='text/javascript' async='' src='https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js')
-    title treemory
+    title Mathekarte
   body
 
     //- mathekarte

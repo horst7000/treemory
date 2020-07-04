@@ -78,7 +78,7 @@ export default class {
         this.input.contentEditable  = false;
         this.input.draggable        = true;
         this.addDragStyleAndDataListener();
-        this.input.id               = this.HTMLId;
+        // this.input.id               = this.HTMLId;
         this.input.dataset.id       = this._id;
         this.value                  = this._value;
         this.container              = new SiblingContainer(this._id);
