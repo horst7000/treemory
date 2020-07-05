@@ -53,7 +53,7 @@ export default class {
      * {value,children:[{...}]}-object
      * @param {*} startfield 
      */
-    import(data, startfield = data[0], startpos = 1) {
+    import(data, startfield = {}, startpos = 1) {
         this.datafields.forEach(datafield => {
             this.remove(datafield);
         });
@@ -76,6 +76,9 @@ export default class {
                 this.defaultfield.childrenIds.push(datafield.id);
             }
         });
+
+        if(!startfield.id)
+            startfield.id = this.defaultfield.childrenIds[0];
 
         let startdatafield = this.datafieldById(startfield.id) || this.datafields[0];
         this.display(startdatafield, startpos);
@@ -545,6 +548,7 @@ export default class {
     }
 
     onSwipeX(distx) {
+        //TODO if startfield in import(...,startfield,...) not in 1st column allow left swipe
         if(distx < 0) {
             if(this.activeColPos-1 <= 0) //new active col not on screen
                 this.focus(this.columns[this.baseColIndex+2]);
